@@ -38,6 +38,49 @@ const deferred = () => {
     return { promise, resolve };
 };
 
+test('performance: ordinary input captures content and recovery once without cloning or immediate layout', () => {
+    const { panel, context, storage } = harness();
+    const timers = [];
+    context.setTimeout = callback => { timers.push(callback); return timers.length; };
+    let metrics = 0;
+    panel.dom.editorArea = {
+        innerHTML: '<p>New content</p>',
+        querySelector: () => null,
+        cloneNode() { throw new Error('Ordinary input must not clone the manuscript'); },
+        get innerText() { throw new Error('Input must not force layout'); },
+    };
+    let draftWrites = 0;
+    const original = context.localStorage.setItem;
+    context.localStorage.setItem = (...args) => { draftWrites++; original(...args); };
+    panel.updateWordAndCharMetrics = () => { metrics++; };
+    panel.triggerXpBurst = () => {};
+    panel.handleEditorInput();
+    assert.equal(panel.activeNote.content, '<p>New content</p>');
+    assert.equal(JSON.parse(storage.get('notenux_draft_1')).content, '<p>New content</p>');
+    assert.equal(draftWrites, 1);
+    assert.equal(metrics, 0);
+    timers[0]();
+    assert.equal(metrics, 1);
+    panel.activeNote = { id: 2 };
+    timers[0]();
+    assert.equal(metrics, 1, 'Delayed counts must not update another note');
+});
+
+test('regression: search highlights are removed only from the serialized copy', () => {
+    const { panel } = harness();
+    let unwrapped = false;
+    panel.dom.editorArea = {
+        innerHTML: '<p><mark class="search-match">Text</mark></p>',
+        querySelector: () => ({}),
+        cloneNode: () => ({
+            querySelectorAll: () => [{ childNodes: ['Text'], replaceWith() { unwrapped = true; } }],
+            get innerHTML() { return unwrapped ? '<p>Text</p>' : ''; },
+        }),
+    };
+    assert.equal(panel.getEditorHtml(), '<p>Text</p>');
+    assert.equal(panel.dom.editorArea.innerHTML, '<p><mark class="search-match">Text</mark></p>');
+});
+
 function manuscriptHarness({ raw = false, plain = false } = {}) {
     const state = harness(() => Promise.resolve(response({})));
     const calls = { markdown: [], plain: [], metrics: [], history: [] };
@@ -1012,10 +1055,9 @@ test('white-box: saveActiveNote flushes editorArea innerHTML to note content bef
         return { ok: true, json: async () => ({ status: 'success', data: { ...panel.activeNote, ...capturedBody } }) };
     });
     panel.dom.editorArea = {
-        cloneNode: () => ({
-            innerHTML: '<p>Pasted image in editor <img src="data:image/png;base64,XYZ"></p>',
-            querySelectorAll: () => []
-        })
+        innerHTML: '<p>Pasted image in editor <img src="data:image/png;base64,XYZ"></p>',
+        querySelector: () => null,
+        cloneNode: () => { throw new Error('Saving ordinary content must not clone the editor'); }
     };
     panel.activeNote.content = '<p>Old content</p>';
 

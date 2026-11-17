@@ -952,6 +952,7 @@ class NotenuxPanel {
         this.maxHistory = 80;
         this.isPerformingHistory = false;
         this.historyDebounce = null;
+        this.metricsDebounce = null;
 
         this.isBulkSelectNotes = false;
         this.selectedNoteIds = new Set();
@@ -4812,15 +4813,28 @@ class NotenuxPanel {
     }
 
     /* ---------------- EDITOR INPUT & METRICS ---------------- */
+    getEditorHtml() {
+        const editor = this.dom.editorArea;
+        // Search decoration is the only reason to clone. Ordinary typing and
+        // saving must not duplicate every node in a large manuscript.
+        if (!editor?.querySelector?.('mark.search-match')) return editor?.innerHTML || '';
+        const content = editor.cloneNode(true);
+        content.querySelectorAll('mark.search-match').forEach(mark => mark.replaceWith(...mark.childNodes));
+        return content.innerHTML;
+    }
+
     handleEditorInput() {
         if (!this.activeNote) return;
 
-        const content = this.dom.editorArea?.cloneNode ? this.dom.editorArea.cloneNode(true) : { querySelectorAll: () => [], innerHTML: this.dom.editorArea?.innerHTML || '' };
-        content.querySelectorAll?.('mark.search-match')?.forEach(mark => mark.replaceWith(...mark.childNodes));
-        this.activeNote.content = content.innerHTML;
-        this.updateWordAndCharMetrics();
+        this.activeNote.content = this.getEditorHtml();
+        // innerText forces layout. Count after a typing pause instead of laying
+        // out the entire document inside every input event.
+        clearTimeout(this.metricsDebounce);
+        const note = this.activeNote;
+        this.metricsDebounce = setTimeout(() => {
+            if (this.activeNote === note) this.updateWordAndCharMetrics();
+        }, 150);
         this.triggerXpBurst();
-        this.saveDraftLocal();
         this.scheduleAutoSave();
 
         if (!this.isPerformingHistory) {
@@ -5042,9 +5056,7 @@ class NotenuxPanel {
             return Promise.resolve(false);
         }
         if (this.activeNote && this.dom.editorArea && !this.isRawMarkdownMode && !this.isPlainTextMode) {
-            const content = this.dom.editorArea.cloneNode(true);
-            content.querySelectorAll('mark.search-match').forEach(mark => mark.replaceWith(...mark.childNodes));
-            this.activeNote.content = content.innerHTML;
+            this.activeNote.content = this.getEditorHtml();
         } else if (this.activeNote && this.dom.markdownRawEditor && this.isRawMarkdownMode) {
             this.activeNote.content = MarkdownEngine.parse(this.dom.markdownRawEditor.value);
         } else if (this.activeNote && this.dom.plainTextEditor && this.isPlainTextMode) {
@@ -5685,6 +5697,7 @@ class NotenuxPanel {
     loadNoteIntoEditor(note) {
         if (!note) return;
         clearTimeout(this.historyDebounce);
+        clearTimeout(this.metricsDebounce);
         this.clearFindHighlights();
         let recoveredDraft = false;
         try {
