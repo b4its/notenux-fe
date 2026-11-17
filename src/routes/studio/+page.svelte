@@ -1,0 +1,1980 @@
+<script>
+import '#lib/styles/studio.css';
+	import { onMount } from 'svelte';
+
+	let { data } = $props();
+	let stats = $derived(data.stats || {}); let activeNote = $derived(data.notes?.[0] || null);
+	onMount(() => {
+
+		import('#lib/runtime/studio.js').then(m => m.start(data));
+	});
+</script>
+<svelte:head><title>Notenux Studio - Editor Catatan & Markdown Gamifikasi</title><meta name="description" content="Notenux: studio menulis retro modern, Markdown, gamifikasi RPG dan penyimpanan otomatis." /><meta name="robots" content="noindex,nofollow" /></svelte:head>
+<div class="retro-crt-screen bg-[var(--bg-main)] text-[var(--text-main)] h-screen h-dvh font-sans flex flex-col antialiased selection:bg-blue-600 selection:text-white overflow-hidden" data-sveltekit-reload>
+
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
+    <header class="shrink-0 bg-[var(--bg-surface)] border-b-2 border-black dark:border-blue-900 shadow-[0_4px_0_rgba(0,0,0,0.25)] px-2 sm:px-4 lg:px-6 py-2 sm:py-2.5 z-30">
+        <div class="flex items-center justify-between gap-1.5 sm:gap-4 max-w-7xl mx-auto">
+
+            <div class="flex items-center gap-1 sm:gap-2.5 min-w-0">
+
+                <button id="mobile-nav-toggle-btn"
+                        class="lg:hidden arcade-btn bg-blue-600 text-white p-1.5 sm:p-2 rounded text-xs shrink-0 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto"
+                        aria-label="Toggle Primary Navigation Drawer">
+                    <i aria-hidden="true" class="fa-solid fa-bars"></i>
+                </button>
+
+                <button id="mobile-explorer-toggle-btn"
+                        class="lg:hidden arcade-btn bg-cyan-600 text-white p-1.5 sm:p-2 rounded text-xs shrink-0 flex items-center justify-center w-8 h-8 sm:w-auto sm:h-auto"
+                        aria-label="Toggle Scroll Explorer Drawer">
+                    <i aria-hidden="true" class="fa-solid fa-folder-open"></i>
+                </button>
+
+                <button id="primary-sidebar-toggle-btn"
+                        class="hidden lg:inline-flex arcade-btn bg-blue-600 hover:bg-blue-500 text-white p-2 rounded text-xs shrink-0"
+                        title="Toggle Primary Navigation Sidebar">
+                    <i aria-hidden="true" class="fa-solid fa-arrows-left-right-to-line"></i>
+                </button>
+
+                <button id="explorer-toggle-btn"
+                        class="hidden lg:inline-flex arcade-btn bg-cyan-700 hover:bg-cyan-600 text-white p-2 rounded text-xs shrink-0"
+                        title="Toggle Scroll Explorer Sidebar">
+                    <i aria-hidden="true" class="fa-solid fa-table-columns"></i>
+                </button>
+
+                <a href="{"/"}" class="flex items-center gap-1.5 sm:gap-2.5 group transition-transform active:translate-y-0.5 shrink-0" title="Kembali ke Landing Page">
+
+                    <img src="{"/assets/logo/dark/icon_horizontal_dark.webp"}"
+                         alt="Notenux Studio"
+                         class="h-6 sm:h-8 w-auto object-contain hidden dark:block transition-transform duration-200 group-hover:scale-105"
+                         decoding="async">
+                    <img src="{"/assets/logo/light/icon_horizontal_light.webp"}"
+                         alt="Notenux Studio"
+                         class="h-6 sm:h-8 w-auto object-contain block dark:hidden transition-transform duration-200 group-hover:scale-105"
+                         decoding="async">
+                    <span class="sr-only">NOTENUX</span>
+                    <span class="text-[9px] font-mono bg-blue-900/20 text-blue-600 dark:text-cyan-300 px-1 py-0.5 rounded border border-blue-500/40 font-bold uppercase hidden sm:inline-block">STUDIO v3.0</span>
+                </a>
+            </div>
+
+            <div class="flex items-center gap-1 sm:gap-2 shrink-0">
+
+                <button id="sound-toggle-btn"
+                        class="arcade-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-900 dark:text-blue-300 p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto hidden lg:inline-flex items-center justify-center"
+                        title="Toggle 8-bit Audio Synthesizer">
+                    <i aria-hidden="true" class="fa-solid fa-volume-high text-blue-600 dark:text-cyan-400 sm:mr-1.5"></i> <span class="hidden xl:inline">SFX: ON</span>
+                </button>
+
+                <button id="crt-toggle-btn"
+                        class="arcade-btn bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/40 dark:hover:bg-purple-800/60 text-purple-900 dark:text-purple-300 px-2 sm:px-2.5 py-1.5 rounded text-xs font-mono hidden xl:inline-flex items-center"
+                        title="Toggle Retro CRT Scanlines Effect">
+                    <i aria-hidden="true" class="fa-solid fa-tv sm:mr-1.5 text-purple-600 dark:text-purple-400"></i> <span class="hidden xl:inline">CRT FX</span>
+                </button>
+
+                <button id="shortcuts-modal-btn"
+                        class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-900 text-main px-2 sm:px-2.5 py-1.5 rounded text-xs font-mono hidden xl:inline-flex items-center"
+                        title="Arcade Controller & Keyboard Shortcuts Guide">
+                    <i aria-hidden="true" class="fa-solid fa-keyboard text-amber-600 dark:text-yellow-400 sm:mr-1.5"></i> <span class="hidden xl:inline">KEYS</span>
+                </button>
+
+                <button id="theme-toggle-btn"
+                        class="arcade-btn bg-amber-300 hover:bg-amber-400 dark:bg-blue-900 dark:hover:bg-blue-800 text-black dark:text-cyan-300 p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto flex items-center justify-center"
+                        title="Toggle Light / Dark Mode">
+                    <i aria-hidden="true" class="fa-solid fa-moon text-cyan-300 sm:mr-1.5"></i> <span class="hidden xl:inline">NIGHT</span>
+                </button>
+
+                <a href="{"/"}"
+                   class="arcade-btn bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-main p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto hidden lg:inline-flex items-center justify-center"
+                   title="Beranda Notenux">
+                    <i aria-hidden="true" class="fa-solid fa-house"></i>
+                </a>
+
+                <button type="button"
+                        id="open-profile-modal-btn"
+                        class="arcade-btn bg-blue-100 hover:bg-blue-200 dark:bg-blue-950 dark:hover:bg-blue-900 text-blue-950 dark:text-cyan-300 p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto flex items-center justify-center border border-blue-400/50"
+                        title="Profil Hero & Keamanan Akun">
+                    <i aria-hidden="true" class="fa-solid fa-user-shield sm:mr-1 text-blue-600 dark:text-cyan-400"></i>
+                    <span class="hidden md:inline" id="top-nav-username">{(data.user?.name ?? 'HERO').slice(0, 10)}</span>
+                </button>
+
+                <form method="POST" action="{"/logout"}" class="inline">
+
+                    <button type="submit"
+                            id="logout-btn"
+                            class="arcade-btn bg-red-600 hover:bg-red-500 text-white p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto flex items-center justify-center"
+                            title="Keluar dari Studio">
+                        <i aria-hidden="true" class="fa-solid fa-right-from-bracket sm:mr-1"></i> <span class="hidden md:inline">LOGOUT</span>
+                    </button>
+                </form>
+
+                <button type="button"
+                        id="inspect-chunks-btn"
+                        class="arcade-btn bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-main p-1.5 sm:px-2.5 sm:py-1.5 rounded text-xs font-mono h-8 sm:h-auto hidden xl:inline-flex items-center justify-center border border-black/20 dark:border-blue-900"
+                        title="Database Shard Telemetry & Integrity Audit">
+                    <i aria-hidden="true" class="fa-solid fa-cubes text-cyan-600 dark:text-cyan-400 sm:mr-1"></i>
+                    <span class="hidden xl:inline">CHUNKS</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden relative min-h-0">
+
+        <div id="sidebar-overlay"
+             class="fixed inset-0 bg-black/60 backdrop-blur-xs z-35 hidden lg:hidden transition-opacity"></div>
+
+        <aside id="primary-nav-sidebar"
+               class="fixed inset-y-0 left-0 z-40 lg:static lg:z-auto w-60 lg:w-56 xl:w-60 2xl:w-64 max-w-[85vw] shrink-0 h-full bg-[var(--bg-surface)] border-r-2 border-black dark:border-blue-900 flex flex-col transition-all duration-200 ease-in-out -translate-x-full lg:translate-x-0 overflow-hidden">
+
+            <div class="p-3 border-b-2 border-black/10 dark:border-white/10 flex items-center justify-between lg:hidden">
+                <div class="flex items-center gap-2">
+                    <img src="{"/assets/logo/dark/icon_dark.webp"}" alt="Notenux Icon" class="w-5 h-5 object-contain hidden dark:inline-block" loading="lazy" decoding="async">
+                    <img src="{"/assets/logo/light/icon_light.webp"}" alt="Notenux Icon" class="w-5 h-5 object-contain inline-block dark:hidden" loading="lazy" decoding="async">
+                    <span class="font-pixel text-[11px] text-blue-500">
+                        NAVIGATION
+                    </span>
+                </div>
+                <button id="close-mobile-nav-btn" class="arcade-btn bg-red-600 text-white text-xs px-2 py-1 rounded">
+                    <i aria-hidden="true" class="fa-solid fa-xmark mr-1"></i> CLOSE
+                </button>
+            </div>
+
+            <div class="player-profile-section p-3 border-b-2 border-black/10 dark:border-white/10">
+                <div class="arcade-card player-status-card p-2.5 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/40 shadow-[2px_2px_0px_#000]">
+                    <div class="player-avatar-row flex items-center gap-2.5 mb-2">
+
+                        <div class="player-avatar-box w-9 h-9 rounded border-2 border-black bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-[2px_2px_0px_#000] relative cursor-pointer hover:bg-blue-500 transition-colors"
+                             id="sidebar-avatar-profile-btn"
+                             title="Kelola Profil & Keamanan ({data.user?.name ?? 'Hero'})">
+                            <i aria-hidden="true" class="fa-solid fa-hat-wizard text-sm"></i>
+                            <span class="collapsed-level-badge hidden font-pixel text-[8px] bg-amber-400 text-black px-1 rounded border border-black absolute -bottom-1 -right-1 shadow-[1px_1px_0px_#000]">
+                                LV.{stats['level'] ?? 1}
+                            </span>
+                        </div>
+                        <div class="min-w-0 flex-1 nav-text-label">
+                            <div class="flex items-center justify-between gap-1">
+                                <h3 id="player-rank-title" class="font-bold text-xs truncate text-blue-950 dark:text-cyan-300">
+                                    <i aria-hidden="true" class="fa-solid fa-award text-amber-600 dark:text-yellow-400 mr-1"></i> {stats['rank_title'] ?? 'Novice Scribe'}
+                                </h3>
+                                <span id="player-level-badge" class="font-pixel text-[9px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-black shrink-0">
+                                    LV.{stats['level'] ?? 1}
+                                </span>
+                            </div>
+                            <div class="text-[10px] font-mono text-slate-700 dark:text-gray-300 flex items-center justify-between mt-0.5">
+                                <span id="player-mana-text" class="font-bold"><i aria-hidden="true" class="fa-solid fa-wand-magic mr-1 text-blue-600 dark:text-cyan-400"></i>{stats['mana'] ?? '50/100 MP'}</span>
+                                <span id="player-xp-text" class="text-amber-600 dark:text-amber-400 font-bold">{stats['total_xp'] ?? 10} XP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="w-full bg-black/20 dark:bg-black/60 h-2 rounded border border-black/40 overflow-hidden p-[1px] nav-hide-on-collapse">
+                        <div id="player-xp-bar"
+                             class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded transition-all duration-300"
+                             style="width: {stats['progress_percent'] ?? 15}%;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <nav class="primary-nav-links flex-1 overflow-y-auto p-3 space-y-1.5 font-mono text-xs">
+                <div class="flex items-center justify-between mb-1 px-2 nav-text-label">
+                    <span class="text-[10px] font-bold text-slate-600 dark:text-gray-400 uppercase tracking-wider">Grimoire Categories</span>
+                    <a href="{"/categories"}"
+                       class="arcade-btn bg-surface hover:bg-cyan-200 dark:hover:bg-blue-900 px-1.5 py-0.5 rounded text-[9px] font-bold text-cyan-600 dark:text-cyan-400"
+                       title="Personalize and manage categories">
+                        <i aria-hidden="true" class="fa-solid fa-plus text-[8px] mr-0.5"></i> CUSTOM
+                    </a>
+                </div>
+
+                <div class="collapsed-cat-header hidden my-1 justify-center">
+                    <a href="{"/categories"}"
+                       class="arcade-btn w-9 h-9 rounded-lg bg-surface hover:bg-cyan-200 dark:hover:bg-blue-900 border border-black/30 dark:border-blue-700 flex items-center justify-center text-cyan-600 dark:text-cyan-400 text-xs shadow-[1px_1px_0px_#000]"
+                       title="Personalize & Forge Categories">
+                        <i aria-hidden="true" class="fa-solid fa-folder-plus text-xs"></i>
+                    </a>
+                </div>
+
+                <a href="#main-content" class="nav-category-link flex items-center gap-2.5 px-3 py-2 rounded-lg border border-transparent hover:border-black/30 dark:hover:border-cyan-400/40 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors bg-blue-600 text-white"
+                   data-category="all"
+                   title="All Scrolls">
+                    <i aria-hidden="true" class="fa-solid fa-book-journal-whills text-sm w-4 text-center"></i>
+                    <span class="nav-text-label font-bold">All Scrolls</span>
+                </a>
+
+                <div id="sidebar-categories-list" class="space-y-1">
+                    {#if data.categories?.length}
+                        {#each data.categories as category}
+                            <div class="nav-category-item group flex items-center justify-between rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors pr-1.5"
+                                 data-category="{category.slug}">
+                                <a href="#main-content" class="nav-category-link flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg truncate"
+                                   data-category="{category.slug}"
+                                   title="{category.name}">
+                                    <i aria-hidden="true" class="{category.icon} text-sm w-4 text-center shrink-0"></i>
+                                    <span class="nav-text-label font-bold truncate">{category.name}</span>
+                                </a>
+                                <div class="hidden group-hover:flex items-center gap-1 shrink-0">
+                                    <button type="button"
+                                            class="sidebar-edit-category-btn text-[10px] text-cyan-600 dark:text-cyan-400 hover:scale-110 transition-transform p-1"
+                                            data-slug="{category.slug}"
+                                            title="Edit Category">
+                                        <i aria-hidden="true" class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button"
+                                            class="sidebar-delete-category-btn text-[10px] text-rose-500 hover:scale-110 transition-transform p-1"
+                                            data-slug="{category.slug}"
+                                            title="Delete Category">
+                                        <i aria-hidden="true" class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        {/each}
+                    {:else}
+                        <div class="nav-category-item group flex items-center justify-between rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors pr-1.5"
+                             data-category="catatan">
+                            <a href="#main-content" class="nav-category-link flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg truncate"
+                               data-category="catatan"
+                               title="Catatan">
+                                <i aria-hidden="true" class="fa-solid fa-note-sticky text-blue-500 text-sm w-4 text-center shrink-0"></i>
+                                <span class="nav-text-label font-bold">Catatan</span>
+                            </a>
+                        </div>
+                        <div class="nav-category-item group flex items-center justify-between rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors pr-1.5"
+                             data-category="tugas">
+                            <a href="#main-content" class="nav-category-link flex-1 flex items-center gap-2.5 px-3 py-2 rounded-lg truncate"
+                               data-category="tugas"
+                               title="Tugas">
+                                <i aria-hidden="true" class="fa-solid fa-list-check text-emerald-500 text-sm w-4 text-center shrink-0"></i>
+                                <span class="nav-text-label font-bold">Tugas</span>
+                            </a>
+                        </div>
+                    {/if}
+                </div>
+            </nav>
+
+            <div class="p-3 border-t-2 border-black/10 dark:border-white/10 text-[10px] font-mono opacity-70 flex items-center justify-between nav-text-label">
+                <span><i aria-hidden="true" class="fa-solid fa-server mr-1"></i> Cloud Database</span>
+                <span><i aria-hidden="true" class="fa-solid fa-cloud-arrow-up mr-1"></i> Auto-Sync</span>
+            </div>
+        </aside>
+
+        <aside id="notes-explorer-sidebar"
+               class="fixed inset-y-0 left-0 lg:left-auto z-40 lg:static lg:z-auto w-72 lg:w-72 xl:w-80 max-w-[88vw] shrink-0 h-full bg-[var(--bg-surface-alt)] border-r-2 border-black dark:border-blue-900 flex flex-col transition-all duration-200 ease-in-out -translate-x-full lg:translate-x-0 overflow-hidden">
+
+            <div class="p-3.5 flex-1 flex flex-col overflow-hidden">
+
+                <div class="flex items-center justify-between pb-2.5 mb-2.5 border-b-2 border-dashed border-blue-500/30">
+                    <div class="flex items-center gap-2">
+                        <i aria-hidden="true" class="fa-solid fa-folder-open text-blue-600 dark:text-cyan-400"></i>
+                        <span class="font-pixel text-[11px] text-blue-900 dark:text-cyan-300">SCROLL DIRECTORY</span>
+                    </div>
+
+                    <button id="close-mobile-explorer-btn" class="arcade-btn bg-red-600 hover:bg-red-500 text-white text-xs px-2 py-1 rounded" title="Close Scroll Directory">
+                        <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-1.5 mb-3">
+                    <button id="new-note-btn"
+                            class="arcade-btn flex-1 bg-blue-600 hover:bg-blue-500 text-white py-2 px-2 rounded text-[11px] font-mono tracking-wider"
+                            title="Create a new root Scroll">
+                        <i aria-hidden="true" class="fa-solid fa-plus mr-1"></i> SCROLL
+                    </button>
+                    <button id="new-folder-btn"
+                            class="arcade-btn bg-amber-600 hover:bg-amber-500 text-white py-2 px-2 rounded text-[11px] font-mono tracking-wider"
+                            title="Create a new root Folder in Directory">
+                        <i aria-hidden="true" class="fa-solid fa-folder-plus mr-1"></i> FOLDER
+                    </button>
+                    <button id="import-note-btn"
+                            class="arcade-btn bg-emerald-600 hover:bg-emerald-500 text-white py-2 px-2 rounded text-[11px] font-mono tracking-wider"
+                            title="Import Markdown (.md) or Text file into a new Scroll">
+                        <i aria-hidden="true" class="fa-solid fa-file-import mr-1"></i> IMPORT
+                    </button>
+                </div>
+
+                <div class="relative mb-2">
+                    <span class="absolute inset-y-0 left-0 pl-2.5 flex items-center pointer-events-none text-slate-500 dark:text-gray-400 text-xs">
+                        <i aria-hidden="true" class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text"
+                           id="search-notes-input"
+                           placeholder="Search scrolls, tags, lore..."
+                           class="w-full bg-white dark:bg-black/40 border-2 border-black dark:border-blue-700 rounded pl-8 pr-2.5 py-1.5 text-xs font-mono focus:outline-none focus:border-cyan-400 shadow-[2px_2px_0px_#000]">
+                </div>
+
+                <div class="flex items-center justify-between gap-1 mb-2 px-1 text-[11px] font-mono">
+                    <div class="flex items-center gap-1 min-w-0">
+                        <span class="opacity-75 shrink-0"><i aria-hidden="true" class="fa-solid fa-arrow-down-wide-short mr-1"></i>SORT:</span>
+                        <select id="sort-notes-select" class="bg-white dark:bg-black/50 border border-black/40 rounded px-1.5 py-0.5 text-[10px] font-mono focus:outline-none focus:border-cyan-400 truncate">
+                            <option value="updated_desc">Recently Updated</option>
+                            <option value="updated_asc">Oldest First</option>
+                            <option value="created_desc">Newest Inscribed</option>
+                            <option value="created_asc">Oldest Inscribed</option>
+                            <option value="title_asc">Title A-Z</option>
+                            <option value="title_desc">Title Z-A</option>
+                            <option value="word_count_desc">Word Count</option>
+                            <option value="level_desc">Level / XP</option>
+                        </select>
+                    </div>
+                    <button id="toggle-bulk-select-notes-btn"
+                            type="button"
+                            class="arcade-btn bg-slate-200 dark:bg-slate-800 hover:bg-blue-100 dark:hover:bg-blue-900 text-main text-[10px] font-mono px-2 py-0.5 rounded border border-black/30 dark:border-blue-700 flex items-center gap-1 shrink-0"
+                            title="Aktifkan mode multiple choice / pilih banyak gulungan">
+                        <i aria-hidden="true" class="fa-solid fa-list-check text-blue-600 dark:text-cyan-400"></i>
+                        <span id="bulk-toggle-label">PILIH</span>
+                    </button>
+                </div>
+
+                <div id="notes-bulk-bar" class="hidden mb-2 p-2 bg-blue-50 dark:bg-blue-950/70 border-2 border-blue-600 dark:border-cyan-400 rounded-lg shadow-[2px_2px_0px_#000] font-mono text-[11px]">
+                    <div class="flex items-center justify-between gap-1 mb-1.5">
+                        <label for="import-file-input" class="flex items-center gap-1.5 cursor-pointer font-bold select-none text-[10px]">
+                            <input type="checkbox" id="bulk-select-all-notes-cb" class="cursor-pointer accent-blue-600 w-3.5 h-3.5">
+                            <span>PILIH SEMUA</span>
+                        </label>
+                        <span id="bulk-selected-notes-count" class="font-bold text-blue-700 dark:text-cyan-300 bg-white dark:bg-black/50 px-1.5 py-0.5 rounded border border-blue-400/40 text-[10px]">
+                            0 dipilih
+                        </span>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-wrap">
+                        <button id="bulk-pin-notes-btn"
+                                type="button"
+                                disabled
+                                class="arcade-btn bg-amber-500 hover:bg-amber-400 disabled:opacity-50 disabled:cursor-not-allowed text-white py-1 px-2 rounded text-[10px] font-bold flex items-center justify-center gap-1"
+                                title="Sematkan / Lepas Pin semua terpilih">
+                            <i aria-hidden="true" class="fa-solid fa-thumbtack"></i> PIN
+                        </button>
+                        <button id="bulk-fav-notes-btn"
+                                type="button"
+                                disabled
+                                class="arcade-btn bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 disabled:cursor-not-allowed text-black py-1 px-2 rounded text-[10px] font-bold flex items-center justify-center gap-1"
+                                title="Favoritkan / Batal Favorit semua terpilih">
+                            <i aria-hidden="true" class="fa-solid fa-star"></i> FAV
+                        </button>
+                        <select id="bulk-move-category-select"
+                                disabled
+                                class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed text-main py-1 px-1.5 rounded text-[10px] font-mono font-bold border border-black/40 shadow-[1px_1px_0px_#000] cursor-pointer"
+                                title="Pindahkan gulungan terpilih ke kategori lain">
+                            <option value="">PINDAH KATEGORI...</option>
+                            {#if data.categories?.length}
+                                {#each data.categories as category}
+                                    <option value="{category.slug}">{category.name}</option>
+                                {/each}
+                            {/if}
+                        </select>
+                        <select id="bulk-move-folder-select"
+                                disabled
+                                class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed text-main py-1 px-1.5 rounded text-[10px] font-mono font-bold border border-black/40 shadow-[1px_1px_0px_#000] cursor-pointer"
+                                title="Pindahkan gulungan terpilih ke folder">
+                            <option value="">PINDAH FOLDER...</option>
+                            <option value="root">[ROOT] Tanpa Folder</option>
+                            {#if data.folders?.length}
+                                {#each data.folders as folder}
+                                    <option value="{folder.id}">{folder.name}</option>
+                                {/each}
+                            {/if}
+                        </select>
+                        <button id="bulk-delete-notes-btn"
+                                type="button"
+                                disabled
+                                class="arcade-btn flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white py-1 px-2 rounded text-[10px] font-bold tracking-wider flex items-center justify-center gap-1">
+                            <i aria-hidden="true" class="fa-solid fa-trash-can"></i> HAPUS
+                        </button>
+                        <button id="bulk-cancel-notes-btn"
+                                type="button"
+                                class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 text-main py-1 px-2 rounded text-[10px] font-bold">
+                            BATAL
+                        </button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-1 overflow-x-auto pb-2 mb-2 text-[11px] font-mono scrollbar-none" id="category-filter-pills-row">
+                    <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-blue-600 text-white active-category whitespace-nowrap shadow-[1px_1px_0px_#000]"
+                            data-category="all">
+                        ALL
+                    </button>
+                    <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-surface whitespace-nowrap hover:bg-amber-100 dark:hover:bg-amber-950/60 text-amber-700 dark:text-amber-400 shadow-[1px_1px_0px_#000]"
+                            data-category="pinned"
+                            title="Filter hanya catatan yang disematkan (Pinned)">
+                        <i aria-hidden="true" class="fa-solid fa-thumbtack mr-1"></i>PINNED
+                    </button>
+                    <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-surface whitespace-nowrap hover:bg-yellow-100 dark:hover:bg-yellow-950/60 text-yellow-700 dark:text-yellow-400 shadow-[1px_1px_0px_#000]"
+                            data-category="favorites"
+                            title="Filter hanya catatan favorit (Favorites)">
+                        <i aria-hidden="true" class="fa-solid fa-star mr-1"></i>FAV
+                    </button>
+                    {#if data.categories?.length}
+                        {#each data.categories as category}
+                            <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-surface whitespace-nowrap hover:bg-blue-200 dark:hover:bg-blue-900 shadow-[1px_1px_0px_#000]"
+                                    data-category="{category.slug}">
+                                <i aria-hidden="true" class="{category.icon} mr-1"></i>{((category.name).slice(0, 10)).toUpperCase()}
+                            </button>
+                        {/each}
+                    {:else}
+                        <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-surface whitespace-nowrap hover:bg-blue-200 dark:hover:bg-blue-900 shadow-[1px_1px_0px_#000]"
+                                data-category="catatan">
+                            <i aria-hidden="true" class="fa-solid fa-note-sticky text-blue-500 mr-1"></i>CATATAN
+                        </button>
+                        <button class="category-filter-btn px-2 py-0.5 rounded border border-black/40 bg-surface whitespace-nowrap hover:bg-blue-200 dark:hover:bg-blue-900 shadow-[1px_1px_0px_#000]"
+                                data-category="tugas">
+                            <i aria-hidden="true" class="fa-solid fa-list-check text-emerald-500 mr-1"></i>TUGAS
+                        </button>
+                    {/if}
+                </div>
+
+                <div id="directory-root-dropzone"
+                     class="hidden mb-2 p-2.5 rounded-lg border-2 border-dashed border-blue-500/60 dark:border-cyan-400/60 bg-blue-50/80 dark:bg-blue-950/50 text-center text-[10px] font-mono text-blue-900 dark:text-cyan-300 transition-all select-none shadow-[2px_2px_0px_#000]"
+                     title="Lepaskan di sini untuk memindahkan Scroll atau Folder ke Root Directory">
+                    <i aria-hidden="true" class="fa-solid fa-arrows-to-dot mr-1 text-xs"></i>
+                    <span>DROP KE SINI UNTUK ROOT (TANPA FOLDER)</span>
+                </div>
+
+                <div class="flex-1 overflow-y-auto pr-1 space-y-1" id="notes-list">
+
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col overflow-y-auto overflow-x-hidden p-2 sm:p-4 lg:p-6 bg-[var(--bg-main)] min-w-0 max-w-full">
+            <div class="w-full mx-auto flex-1 flex flex-col space-y-2.5 sm:space-y-3 min-w-0 max-w-full h-full">
+
+                <div id="studio-dynamic-island" class="dynamic-island-container sticky top-0 z-30 w-full transition-all duration-300">
+
+                    <div class="dynamic-island-capsule arcade-card p-2 sm:p-2.5 rounded-2xl flex flex-col gap-1.5 shadow-[4px_4px_0px_#000] backdrop-blur-md bg-[var(--bg-surface)]/95 border-2 border-black dark:border-cyan-500/60 min-w-0 max-w-full">
+                        <!-- Tier 1: Scroll Command Bar (Scroll Title is 100% visible and prominent on all viewports without squashing) -->
+                        <div class="flex items-center justify-between gap-2 min-w-0 w-full">
+
+                            <div class="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+                                <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-100 dark:bg-blue-950/80 border-2 border-black dark:border-cyan-500 flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000]">
+                                    <i aria-hidden="true" class="fa-solid fa-scroll text-xs sm:text-sm text-blue-600 dark:text-cyan-400"></i>
+                                </div>
+
+                                <input type="text"
+                                       id="note-title-input"
+                                       placeholder="{activeNote ? 'Judul catatan...' : 'Belum ada catatan dipilih...'}"
+                                       value="{activeNote?.title ?? ''}"
+                                       readonly={!activeNote}
+                                       class="w-full min-w-0 flex-1 text-sm sm:text-base font-bold bg-transparent border-b-2 border-dashed border-black/15 dark:border-blue-800 hover:border-blue-400 focus:border-cyan-400 focus:outline-none transition-colors px-1 py-0.5 truncate"
+                                       title="Scroll Title">
+                            </div>
+
+                            <div class="flex items-center gap-1 sm:gap-1.5 shrink-0">
+
+                                <button id="save-now-btn"
+                                        class="arcade-btn bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 sm:px-3.5 h-7 sm:h-8 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center justify-center shrink-0 shadow-[2px_2px_0px_#000]"
+                                        title="Simpan naskah catatan sekarang (Ctrl+S)">
+                                    <i aria-hidden="true" class="fa-solid fa-floppy-disk mr-1"></i> <span>SAVE</span>
+                                </button>
+                                <button type="button" id="mobile-save-now-btn" class="hidden" aria-hidden="true"></button>
+
+                                <button type="button"
+                                        id="dynamic-island-toggle-btn"
+                                        class="arcade-btn bg-gradient-to-r from-blue-700 to-indigo-700 hover:from-blue-600 hover:to-indigo-600 text-white px-2.5 sm:px-3.5 h-7 sm:h-8 rounded-lg text-xs font-mono font-bold flex items-center gap-1 sm:gap-1.5 shadow-[2px_2px_0px_#000] cursor-pointer shrink-0 transition-all hover:scale-105 active:scale-95"
+                                        title="Buka / Tutup Dynamic Island Tools (Alt+T)"
+                                        aria-expanded="false"
+                                        aria-controls="dynamic-island-tray">
+                                    <i aria-hidden="true" class="fa-solid fa-layer-group text-cyan-300"></i>
+                                    <span class="font-pixel text-[9px] sm:text-[10px]">TOOLS</span>
+                                    <i aria-hidden="true" id="island-chevron-icon" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300"></i>
+                                </button>
+                                <button type="button" id="mobile-dynamic-island-toggle-btn" class="hidden" aria-hidden="true"></button>
+                            </div>
+                        </div>
+
+                        <!-- Tier 2: Metadata & Property Rail (Category, Folder, Telemetry, Star Bookmark, Pin) -->
+                        <div class="flex items-center justify-between gap-1.5 sm:gap-2 w-full min-w-0 pt-1.5 border-t border-black/10 dark:border-cyan-500/20 overflow-x-auto no-scrollbar scroll-smooth">
+
+                            <div class="flex items-center gap-1.5 min-w-0 flex-1 sm:flex-initial">
+
+                                <div class="flex items-center gap-1 bg-surface-alt px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] min-w-[105px] max-w-[145px] sm:max-w-[160px] flex-1 sm:flex-initial" title="Kategori Naskah">
+                                    <i aria-hidden="true" class="fa-solid fa-tag text-blue-500 dark:text-cyan-400 text-xs shrink-0"></i>
+                                    <select id="note-category-select" class="w-full bg-transparent border-0 text-xs font-mono font-bold focus:outline-none cursor-pointer truncate">
+                                        {#if data.categories?.length}
+                                            {#each data.categories as category}
+                                                <option value="{category.slug}" data-id="{category.id}">[{(category.slug).toUpperCase()}] {category.name}</option>
+                                            {/each}
+                                        {:else}
+                                            <option value="catatan">[CATATAN] Catatan</option>
+                                            <option value="tugas">[TUGAS] Tugas</option>
+                                        {/if}
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center gap-1 bg-surface-alt px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] min-w-[105px] max-w-[145px] sm:max-w-[160px] flex-1 sm:flex-initial" title="Folder Naskah / Direktori Gulungan">
+                                    <i aria-hidden="true" class="fa-solid fa-folder text-amber-500 dark:text-yellow-400 text-xs shrink-0"></i>
+                                    <select id="note-folder-select" class="w-full bg-transparent border-0 text-xs font-mono font-bold focus:outline-none cursor-pointer truncate">
+                                        <option value="">[ROOT] Tanpa Folder</option>
+                                        {#if data.folders?.length}
+                                            {#each data.folders as folder}
+                                                <option value="{folder.id}" selected={activeNote?.folder_id === folder.id}>{folder.name}</option>
+                                            {/each}
+                                        {/if}
+                                    </select>
+                                </div>
+
+                                <span id="save-status-text" class="hidden xl:inline-flex px-2 py-0.5 sm:py-1 rounded-lg border border-black/15 dark:border-blue-900 bg-surface-alt text-emerald-700 dark:text-emerald-400 text-[11px] font-bold items-center gap-1.5 shadow-[1px_1px_0px_#000] shrink-0">
+                                    <i aria-hidden="true" class="fa-solid fa-circle-check"></i> Synchronized
+                                </span>
+
+                                <span id="word-count-badge" class="hidden 2xl:inline-flex px-2 py-0.5 sm:py-1 rounded-lg border border-black/15 dark:border-blue-900 bg-blue-100 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 text-[11px] font-bold items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0">
+                                    <i aria-hidden="true" class="fa-solid fa-pen-nib text-blue-600 dark:text-blue-400"></i> 0 Words
+                                </span>
+                            </div>
+
+                            <div class="flex items-center gap-1 sm:gap-1.5 shrink-0 ml-auto">
+
+                                <button id="favorite-note-btn"
+                                        class="arcade-btn bg-surface hover:bg-amber-100 dark:hover:bg-amber-900/40 w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000]"
+                                        title="Toggle Favorite Bookmark">
+                                    <i aria-hidden="true" class="fa-regular fa-star text-amber-600 dark:text-yellow-400"></i>
+                                </button>
+
+                                <button id="pin-note-btn"
+                                        class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-xs font-mono flex items-center justify-center shrink-0 shadow-[1px_1px_0px_#000]"
+                                        title="Toggle Pinned Note">
+                                    <i aria-hidden="true" class="fa-solid fa-thumbtack"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="dynamic-island-tray"
+                         class="collapsed dynamic-island-slide-tray arcade-card mt-2 p-2.5 sm:p-3 rounded-2xl flex flex-col gap-2.5 shadow-[4px_4px_0px_#000] backdrop-blur-lg bg-[var(--bg-surface)]/98 border-2 border-black dark:border-cyan-500/80 min-w-0 max-w-full">
+
+                        <!-- Tier 1: Horizontally Scrollable HUD Telemetry Rail ("munculnya digulir, dan itu interaktif") -->
+                        <div class="flex items-center gap-2 p-1.5 bg-surface-alt rounded-xl border border-black/15 dark:border-blue-900 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x w-full min-w-0 shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)]">
+                            <span class="text-[10px] font-mono font-bold text-slate-500 uppercase px-1 shrink-0 flex items-center gap-1">
+                                <i aria-hidden="true" class="fa-solid fa-chart-simple text-blue-500"></i> STATS:
+                            </span>
+                            <span id="reading-time-badge" class="px-2 py-0.5 rounded border border-black/20 dark:border-blue-900 bg-blue-100 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 text-[11px] font-bold flex items-center shrink-0">
+                                <i aria-hidden="true" class="fa-solid fa-clock mr-1 text-blue-600 dark:text-cyan-400"></i> 1m Read
+                            </span>
+                            <span id="char-count-badge" class="px-2 py-0.5 rounded border border-black/20 dark:border-blue-900 bg-blue-100 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 text-[11px] font-bold flex items-center shrink-0">
+                                <i aria-hidden="true" class="fa-solid fa-font mr-1 text-blue-600 dark:text-blue-400"></i> 0 Chars
+                            </span>
+                            <span id="scroll-created-badge"
+                                  class="px-2 py-0.5 rounded border border-black/20 dark:border-blue-900 bg-surface text-slate-700 dark:text-slate-300 font-mono text-[10px] sm:text-[11px] inline-flex items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0"
+                                  title="Waktu Gulungan Ini Dibuat">
+                                <i aria-hidden="true" class="fa-solid fa-calendar-plus text-blue-600 dark:text-cyan-400"></i>
+                                <span id="scroll-created-text">Dibuat: -</span>
+                            </span>
+                            <span id="scroll-updated-badge"
+                                  class="px-2 py-0.5 rounded border border-black/20 dark:border-blue-900 bg-surface text-slate-700 dark:text-slate-300 font-mono text-[10px] sm:text-[11px] inline-flex items-center gap-1 shadow-[1px_1px_0px_#000] shrink-0"
+                                  title="Waktu Gulungan Ini Terakhir Diperbarui">
+                                <i aria-hidden="true" class="fa-solid fa-clock-rotate-left text-emerald-600 dark:text-emerald-400 shrink-0"></i>
+                                <span id="scroll-updated-text">Diperbarui: -</span>
+                            </span>
+
+                            <div class="flex items-center gap-1 bg-surface px-2 py-0.5 rounded border border-black/20 dark:border-blue-900 text-[11px] font-mono shadow-[1px_1px_0px_#000] shrink-0">
+                                <i aria-hidden="true" class="fa-solid fa-bullseye text-amber-600 dark:text-amber-400"></i>
+                                <span id="quest-goal-text" class="font-bold text-slate-900 dark:text-slate-100">Goal: 0/250w</span>
+                                <select id="quest-goal-select" class="no-retro-select bg-transparent border-0 text-[10px] focus:outline-none ml-0.5 cursor-pointer font-bold text-slate-900 dark:text-slate-100 opacity-90 hover:opacity-100">
+                                    <option value="100">100w</option>
+                                    <option value="250" selected>250w</option>
+                                    <option value="500">500w</option>
+                                    <option value="1000">1000w</option>
+                                </select>
+                            </div>
+
+                            <button id="chunk-count-badge"
+                                    type="button"
+                                    class="arcade-btn bg-surface hover:bg-cyan-100 dark:hover:bg-cyan-950/60 text-cyan-800 dark:text-cyan-300 px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-black/20 dark:border-cyan-800 shadow-[1px_1px_0px_#000] cursor-pointer flex items-center gap-1 shrink-0"
+                                    title="Audit Database Chunks & Shards Telemetry">
+                                <i aria-hidden="true" class="fa-solid fa-cubes text-cyan-600 dark:text-cyan-400"></i>
+                                <span>0 Chunks</span>
+                            </button>
+                        </div>
+
+                        <!-- Tier 2: Horizontally Scrollable Category Chips & Scroll Controls ("munculnya digulir, dan itu interaktif") -->
+                        <div class="flex items-center justify-between gap-2 pb-2 border-b border-black/10 dark:border-white/10 w-full min-w-0">
+
+                            <div id="island-chips-track" class="flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x flex-1 min-w-0 py-0.5">
+                                <button type="button" data-island-section="all" class="island-chip-btn active px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-black/20 dark:border-cyan-500/40 bg-blue-600 text-white shadow-[1px_1px_0px_#000] shrink-0 transition-all flex items-center gap-1.5">
+                                    <i aria-hidden="true" class="fa-solid fa-border-all text-[11px]"></i>
+                                    <span>Semua Tools</span>
+                                </button>
+                                <button type="button" data-island-section="formatting" class="island-chip-btn px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-black/20 dark:border-blue-900 bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-700 dark:text-slate-300 shadow-[1px_1px_0px_#000] shrink-0 transition-all flex items-center gap-1.5">
+                                    <i aria-hidden="true" class="fa-solid fa-font text-blue-600 dark:text-cyan-400 text-[11px]"></i>
+                                    <span>✍️ Teks & Format</span>
+                                </button>
+                                <button type="button" data-island-section="inserts" class="island-chip-btn px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-black/20 dark:border-blue-900 bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-700 dark:text-slate-300 shadow-[1px_1px_0px_#000] shrink-0 transition-all flex items-center gap-1.5">
+                                    <i aria-hidden="true" class="fa-solid fa-table-cells text-emerald-600 dark:text-emerald-400 text-[11px]"></i>
+                                    <span>🧱 Tabel & Sisipan</span>
+                                </button>
+                                <button type="button" data-island-section="studio" class="island-chip-btn px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-black/20 dark:border-blue-900 bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-700 dark:text-slate-300 shadow-[1px_1px_0px_#000] shrink-0 transition-all flex items-center gap-1.5">
+                                    <i aria-hidden="true" class="fa-solid fa-wand-magic-sparkles text-purple-600 dark:text-purple-400 text-[11px]"></i>
+                                    <span>⚡ Mode & Studio</span>
+                                </button>
+                                <button type="button" data-island-section="operations" class="island-chip-btn px-2.5 py-1 rounded-lg text-xs font-mono font-bold border border-black/20 dark:border-blue-900 bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/40 text-slate-700 dark:text-slate-300 shadow-[1px_1px_0px_#000] shrink-0 transition-all flex items-center gap-1.5">
+                                    <i aria-hidden="true" class="fa-solid fa-box-archive text-amber-600 dark:text-amber-400 text-[11px]"></i>
+                                    <span>📊 Arsip & Operasi</span>
+                                </button>
+                            </div>
+
+                            <div class="flex items-center gap-1 shrink-0">
+                                <button type="button" id="island-scroll-left-btn" class="hidden sm:flex arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 w-6 h-6 rounded items-center justify-center text-[10px]" title="Scroll Tools Left">
+                                    <i aria-hidden="true" class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <button type="button" id="island-scroll-right-btn" class="hidden sm:flex arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 w-6 h-6 rounded items-center justify-center text-[10px]" title="Scroll Tools Right">
+                                    <i aria-hidden="true" class="fa-solid fa-chevron-right"></i>
+                                </button>
+                                <button type="button" id="island-close-btn" class="arcade-btn bg-surface hover:bg-rose-100 dark:hover:bg-rose-950/60 text-rose-500 w-6 h-6 rounded flex items-center justify-center text-[10px] ml-1" title="Tutup Dynamic Island (Esc / Alt+T)">
+                                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="editor-toolbar-decks" class="flex flex-col gap-2 min-w-0 max-w-full">
+
+                            <div id="editor-deck-1" class="island-tool-deck flex items-center gap-1 sm:gap-1.5 pb-2 border-b border-black/10 dark:border-white/10 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x flex-nowrap sm:flex-wrap w-full min-w-0">
+                                <div class="flex items-center gap-1 sm:gap-1.5 shrink-0 sm:shrink sm:flex-wrap">
+
+                                    <div class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <i aria-hidden="true" class="fa-solid fa-font text-blue-500 dark:text-cyan-400 text-xs px-0.5 shrink-0"></i>
+                                        <select id="font-family-select"
+                                                class="bg-white dark:bg-black/50 border border-black/30 dark:border-blue-800 rounded px-1.5 py-0.5 text-xs font-mono focus:outline-none focus:border-cyan-400 max-w-[125px] sm:max-w-[145px]">
+                                            <option value="pixel">Pixel (Press Start 2P)</option>
+                                            <option value="arcade">Arcade (VT323)</option>
+                                            <option value="mono">Cyber Mono (Fira Code)</option>
+                                            <option value="sans">Modern Sans (Instrument)</option>
+                                            <option value="serif">Grimoire (Merriweather)</option>
+                                        </select>
+                                        <span class="text-black/30 dark:text-white/30 text-xs">|</span>
+                                        <select id="font-size-select"
+                                                class="bg-white dark:bg-black/50 border border-black/30 dark:border-blue-800 rounded px-1 py-0.5 text-xs font-mono focus:outline-none focus:border-cyan-400 w-16">
+                                            <option value="12px">12px</option>
+                                            <option value="14px">14px</option>
+                                            <option value="16px" selected>16px</option>
+                                            <option value="18px">18px</option>
+                                            <option value="20px">20px</option>
+                                            <option value="24px">24px</option>
+                                            <option value="28px">28px</option>
+                                            <option value="32px">32px</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button id="editor-undo-btn" data-command="undo" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Undo (Ctrl+Z)">
+                                            <i aria-hidden="true" class="fa-solid fa-rotate-left"></i>
+                                        </button>
+                                        <button id="editor-redo-btn" data-command="redo" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">
+                                            <i aria-hidden="true" class="fa-solid fa-rotate-right"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button data-command="bold" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs font-bold flex items-center justify-center shrink-0" title="Bold (Ctrl+B)">
+                                            <i aria-hidden="true" class="fa-solid fa-bold"></i>
+                                        </button>
+                                        <button data-command="italic" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs italic flex items-center justify-center shrink-0" title="Italic (Ctrl+I)">
+                                            <i aria-hidden="true" class="fa-solid fa-italic"></i>
+                                        </button>
+                                        <button data-command="underline" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs underline flex items-center justify-center shrink-0" title="Underline (Ctrl+U)">
+                                            <i aria-hidden="true" class="fa-solid fa-underline"></i>
+                                        </button>
+                                        <button data-command="strikeThrough" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs line-through flex items-center justify-center shrink-0" title="Strikethrough">
+                                            <i aria-hidden="true" class="fa-solid fa-strikethrough"></i>
+                                        </button>
+                                        <button data-command="createLink" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Sisipkan Tautan / Hyperlink">
+                                            <i aria-hidden="true" class="fa-solid fa-link"></i>
+                                        </button>
+                                        <button data-command="unlink" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Hapus Tautan">
+                                            <i aria-hidden="true" class="fa-solid fa-link-slash"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button data-command="formatBlock" data-value="h1" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-1.5 h-7 rounded text-xs font-bold shrink-0" title="Heading 1">H1</button>
+                                        <button data-command="formatBlock" data-value="h2" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-1.5 h-7 rounded text-xs font-bold shrink-0" title="Heading 2">H2</button>
+                                        <button data-command="formatBlock" data-value="h3" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-1.5 h-7 rounded text-xs font-bold shrink-0" title="Heading 3">H3</button>
+                                        <button data-command="formatBlock" data-value="p" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-1.5 h-7 rounded text-xs font-bold shrink-0" title="Paragraph">P</button>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-1 sm:gap-1.5 shrink-0 sm:shrink sm:ml-auto">
+
+                                    <div class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button data-command="justifyLeft" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Align Left">
+                                            <i aria-hidden="true" class="fa-solid fa-align-left"></i>
+                                        </button>
+                                        <button data-command="justifyCenter" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Align Center">
+                                            <i aria-hidden="true" class="fa-solid fa-align-center"></i>
+                                        </button>
+                                        <button data-command="justifyRight" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Align Right">
+                                            <i aria-hidden="true" class="fa-solid fa-align-right"></i>
+                                        </button>
+                                    </div>
+
+                                    <button id="clear-editor-btn" type="button" class="arcade-btn bg-surface hover:bg-rose-200 dark:hover:bg-rose-950 text-rose-600 dark:text-rose-400 font-bold px-2 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0" title="Bersihkan format teks atau kosongkan catatan">
+                                        <i aria-hidden="true" class="fa-solid fa-broom mr-1"></i> CLEAR
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="editor-deck-2" class="island-tool-deck flex items-center gap-1 sm:gap-1.5 pb-2 border-b border-black/10 dark:border-white/10 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x flex-nowrap sm:flex-wrap w-full min-w-0">
+
+                                <div id="notepad-mode-banner" class="hidden items-center gap-2 bg-emerald-100 dark:bg-emerald-950/70 border border-emerald-500/60 rounded-lg px-2.5 py-1 text-xs font-mono text-emerald-900 dark:text-emerald-300 shadow-[1px_1px_0px_#000] w-full">
+                                    <i aria-hidden="true" class="fa-solid fa-file-lines text-emerald-600 dark:text-emerald-400"></i>
+                                    <span class="font-bold">MODE NOTEPAD</span>
+                                    <span class="hidden md:inline text-black/60 dark:text-emerald-400/80">— Teks biasa murni tanpa format, siap disalin kapan saja.</span>
+                                </div>
+
+                                <div id="editor-deck-2-inserts" class="flex items-center gap-1 sm:gap-1.5 shrink-0 sm:shrink sm:flex-wrap">
+
+                                    <div class="flex items-center gap-0.5 sm:gap-1 bg-surface-alt p-0.5 sm:p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button data-command="insertUnorderedList" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Bullet List">
+                                            <i aria-hidden="true" class="fa-solid fa-list-ul"></i>
+                                        </button>
+                                        <button data-command="insertOrderedList" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Numbered List">
+                                            <i aria-hidden="true" class="fa-solid fa-list-ol"></i>
+                                        </button>
+                                        <button data-command="formatBlock" data-value="blockquote" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Quote Block">
+                                            <i aria-hidden="true" class="fa-solid fa-quote-left"></i>
+                                        </button>
+                                        <button data-command="formatBlock" data-value="pre" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0" title="Code Block">
+                                            <i aria-hidden="true" class="fa-solid fa-code"></i>
+                                        </button>
+                                        <button data-command="insertHorizontalRule" class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 w-7 h-7 rounded text-xs flex items-center justify-center shrink-0" title="Divider Line">
+                                            <i aria-hidden="true" class="fa-solid fa-minus"></i>
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center gap-0.5 sm:gap-1 bg-surface-alt p-0.5 sm:p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button id="insert-table-btn"
+                                                class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Insert 3x4 Retro Data Table">
+                                            <i aria-hidden="true" class="fa-solid fa-table mr-1"></i> TABLE
+                                        </button>
+                                        <button id="insert-task-btn"
+                                                class="arcade-btn bg-blue-700 hover:bg-blue-600 text-white px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Insert Interactive Quest Checklist">
+                                            <i aria-hidden="true" class="fa-solid fa-square-check mr-1"></i> TASK
+                                        </button>
+                                        <button id="insert-media-btn"
+                                                class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Sisipkan Gambar atau Artefak Pixel">
+                                            <i aria-hidden="true" class="fa-solid fa-image mr-1 text-blue-600 dark:text-cyan-400"></i> IMG
+                                        </button>
+                                        <input type="file" id="media-file-input" accept="image/*" class="hidden">
+                                    </div>
+                                </div>
+
+                                <div id="editor-deck-2-studio" class="flex items-center gap-1 sm:gap-1.5 shrink-0 sm:shrink sm:ml-auto">
+
+                                    <div id="editor-deck-2-palette" class="flex items-center gap-1 bg-surface-alt p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] px-1.5 h-7 shrink-0" title="Palet Pewarnaan Naskah & Teks (Adaptif Dark & Light Mode)">
+                                        <span class="text-[10px] font-mono font-bold text-slate-500 mr-0.5 shrink-0" title="Warna Font"><i aria-hidden="true" class="fa-solid fa-palette text-blue-500"></i></span>
+
+                                        <button data-color="#000000" data-color-light="#0f172a" data-color-dark="#f8fafc" data-color-token="black" data-color-name="Kontras Utama (Hitam/Putih)" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-black dark:bg-slate-100 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0 shadow-xs" title="Kontras Utama (Hitam di Terang, Putih di Gelap)"></button>
+
+                                        <button data-color="#1f2937" data-color-light="#1e293b" data-color-dark="#cbd5e1" data-color-token="charcoal" data-color-name="Charcoal / Abu Tua" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-gray-800 dark:bg-slate-300 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Dark Charcoal (Gelap di Terang, Terang di Gelap)"></button>
+
+                                        <button data-color="#64748b" data-color-light="#475569" data-color-dark="#94a3b8" data-color-token="slate" data-color-name="Slate Gray" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-slate-600 dark:bg-slate-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Slate Gray (Gelap di Terang, Terang di Gelap)"></button>
+
+                                        <button data-color="#f8fafc" data-color-light="#334155" data-color-dark="#ffffff" data-color-token="white" data-color-name="Monokrom Terang" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-slate-200 dark:bg-white border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Putih / Monokrom (Gelap di Terang, Putih Terang di Gelap)"></button>
+
+                                        <button data-color="#ef4444" data-color-light="#991b1b" data-color-dark="#f87171" data-color-token="red" data-color-name="Merah Crimson" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-red-800 dark:bg-red-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Merah Crimson (Merah Tua di Terang, Merah Terang di Gelap)"></button>
+
+                                        <button data-color="#f97316" data-color-light="#c2410c" data-color-dark="#fb923c" data-color-token="orange" data-color-name="Jingga / Retro Orange" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-orange-700 dark:bg-orange-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Jingga / Retro Orange (Jingga Tua di Terang, Oranye Terang di Gelap)"></button>
+
+                                        <button data-color="#f59e0b" data-color-light="#b45309" data-color-dark="#fde047" data-color-token="amber" data-color-name="Pixel Gold / Amber" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-amber-700 dark:bg-yellow-300 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Pixel Gold / Amber (Coklat Emas di Terang, Kuning Terang di Gelap)"></button>
+
+                                        <button data-color="#84cc16" data-color-light="#3f6212" data-color-dark="#bef264" data-color-token="lime" data-color-name="Hijau Lime" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-lime-800 dark:bg-lime-300 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Hijau Lime (Hijau Tua di Terang, Neon Lime Terang di Gelap)"></button>
+
+                                        <button data-color="#10b981" data-color-light="#065f46" data-color-dark="#4ade80" data-color-token="emerald" data-color-name="Emerald Glow" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-emerald-800 dark:bg-emerald-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Emerald Glow (Hijau Tua di Terang, Hijau Terang di Gelap)"></button>
+
+                                        <button data-color="#06b6d4" data-color-light="#0e7490" data-color-dark="#38bdf8" data-color-token="cyan" data-color-name="Neon Cyan" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-cyan-800 dark:bg-cyan-300 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Neon Cyan (Cyan Tua di Terang, Neon Cyan Terang di Gelap)"></button>
+
+                                        <button data-color="#3b82f6" data-color-light="#1e40af" data-color-dark="#60a5fa" data-color-token="blue" data-color-name="Arcade Blue" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-blue-800 dark:bg-blue-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Arcade Blue (Biru Tua di Terang, Biru Terang di Gelap)"></button>
+
+                                        <button data-color="#a855f7" data-color-light="#581c87" data-color-dark="#c084fc" data-color-token="purple" data-color-name="Mystic Purple" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-purple-900 dark:bg-purple-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Mystic Purple (Ungu Tua di Terang, Lavender Terang di Gelap)"></button>
+
+                                        <button data-color="#ec4899" data-color-light="#9d174d" data-color-dark="#f472b6" data-color-token="pink" data-color-name="Retro Pink / Magenta" data-color-type="foreColor" class="adaptive-color-swatch w-3.5 h-3.5 rounded-full bg-pink-800 dark:bg-pink-400 border border-black/50 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Retro Pink / Magenta (Magenta Tua di Terang, Pink Terang di Gelap)"></button>
+
+                                        <label class="relative inline-flex items-center cursor-pointer shrink-0" title="Pilih Warna Teks Bebas (RGB Custom Color)">
+                                            <input type="color" id="custom-text-color-picker" value="#000000" class="w-3.5 h-3.5 rounded-full cursor-pointer border border-black/50 p-0 overflow-hidden opacity-0 absolute inset-0">
+                                            <span class="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-rose-500 via-amber-400 via-emerald-400 to-blue-500 border border-black/50 hover:scale-125 transition-transform block"></span>
+                                        </label>
+
+                                        <span class="text-black/30 dark:text-white/30 text-xs mx-0.5">|</span>
+
+                                        <span class="text-[10px] font-mono font-bold text-slate-500 shrink-0" title="Sorotan / Highlight Teks"><i aria-hidden="true" class="fa-solid fa-highlighter text-yellow-500"></i></span>
+
+                                        <button data-color="#fef08a" data-color-type="hiliteColor" class="w-3.5 h-3.5 rounded-sm bg-yellow-200 border border-yellow-500/80 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Sorotan Kuning (#fef08a)"></button>
+
+                                        <button data-color="#bbf7d0" data-color-type="hiliteColor" class="w-3.5 h-3.5 rounded-sm bg-emerald-200 border border-emerald-500/80 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Sorotan Hijau (#bbf7d0)"></button>
+
+                                        <button data-color="#bae6fd" data-color-type="hiliteColor" class="w-3.5 h-3.5 rounded-sm bg-cyan-200 border border-cyan-500/80 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Sorotan Biru Muda (#bae6fd)"></button>
+
+                                        <button data-color="#fbcfe8" data-color-type="hiliteColor" class="w-3.5 h-3.5 rounded-sm bg-pink-200 border border-pink-500/80 cursor-pointer hover:scale-125 transition-transform shrink-0" title="Sorotan Merah Muda (#fbcfe8)"></button>
+
+                                        <button data-color="transparent" data-color-type="hiliteColor" class="w-3.5 h-3.5 rounded-sm bg-transparent border border-dashed border-red-500 flex items-center justify-center cursor-pointer hover:scale-125 transition-transform shrink-0 text-[8px] text-red-500 font-bold" title="Hapus Sorotan / Clear Highlight">✕</button>
+
+                                        <label class="relative inline-flex items-center cursor-pointer shrink-0" title="Pilih Warna Highlight Bebas (RGB Custom Highlight)">
+                                            <input type="color" id="custom-hilite-color-picker" value="#fef08a" class="w-3.5 h-3.5 rounded-sm cursor-pointer border border-black/50 p-0 overflow-hidden opacity-0 absolute inset-0">
+                                            <span class="w-3.5 h-3.5 rounded-sm bg-gradient-to-tr from-yellow-200 via-pink-200 to-cyan-200 border border-black/50 hover:scale-125 transition-transform block"></span>
+                                        </label>
+                                    </div>
+
+                                    <div class="flex items-center gap-0.5 sm:gap-1 bg-surface-alt p-0.5 sm:p-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button id="markdown-paste-btn"
+                                                class="arcade-btn bg-cyan-600 hover:bg-cyan-500 text-white px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Paste or Convert Raw Markdown (.md)">
+                                            <i aria-hidden="true" class="fa-solid fa-file-code mr-1"></i> MD
+                                        </button>
+                                        <button id="markdown-view-toggle-btn"
+                                                class="arcade-btn bg-surface hover:bg-cyan-200 dark:hover:bg-cyan-900/40 px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Toggle Raw Markdown Textarea View">
+                                            <i aria-hidden="true" class="fa-brands fa-markdown mr-1 text-blue-600 dark:text-cyan-400"></i> RAW
+                                        </button>
+                                        <button id="plain-text-toggle-btn"
+                                                class="arcade-btn bg-surface hover:bg-emerald-200 dark:hover:bg-emerald-900/40 px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Mode Teks Biasa / Notepad (Alt+N)">
+                                            <i aria-hidden="true" class="fa-solid fa-file-lines mr-1 text-emerald-600 dark:text-emerald-400"></i> TXT
+                                        </button>
+                                        <button id="find-replace-toggle-btn"
+                                                class="arcade-btn bg-surface hover:bg-amber-200 dark:hover:bg-amber-900/40 px-2 sm:px-2.5 h-7 rounded text-xs font-mono flex items-center justify-center shrink-0"
+                                                title="Find & Replace in Scroll (Ctrl+F)">
+                                            <i aria-hidden="true" class="fa-solid fa-magnifying-glass mr-1 text-amber-600 dark:text-yellow-400"></i> FIND
+                                        </button>
+                                    </div>
+
+                                    <div class="flex items-center bg-surface rounded border border-black/20 dark:border-blue-800 px-1 sm:px-1.5 h-7 shadow-[1px_1px_0px_#000] shrink-0">
+                                        <button id="zoom-out-btn"
+                                                class="text-xs hover:text-blue-600 dark:hover:text-cyan-400 px-1 cursor-pointer shrink-0"
+                                                title="Zoom Out Canvas">
+                                            <i aria-hidden="true" class="fa-solid fa-minus text-[10px]"></i>
+                                        </button>
+                                        <button id="zoom-reset-btn"
+                                                class="px-1.5 text-[11px] font-mono font-bold hover:text-blue-600 dark:hover:text-cyan-400 cursor-pointer shrink-0"
+                                                title="Click to Reset Zoom (100%)">
+                                            <span id="zoom-level-display">100%</span>
+                                        </button>
+                                        <button id="zoom-in-btn"
+                                                class="text-xs hover:text-blue-600 dark:hover:text-cyan-400 px-1 cursor-pointer shrink-0"
+                                                title="Zoom In Canvas">
+                                            <i aria-hidden="true" class="fa-solid fa-plus text-[10px]"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="editor-deck-operations" class="island-tool-deck flex items-center justify-between gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth touch-pan-x flex-nowrap sm:flex-wrap w-full min-w-0 pt-0.5">
+
+                                <div class="flex items-center gap-1 bg-surface-alt px-2 py-1 rounded-lg border border-black/20 dark:border-blue-900 shadow-[1px_1px_0px_#000] shrink-0">
+                                    <span class="text-[10px] font-mono font-bold text-slate-500 uppercase mr-1">Kategori:</span>
+                                    <button type="button"
+                                            id="quick-edit-category-btn"
+                                            class="arcade-btn bg-surface hover:bg-cyan-200 dark:hover:bg-blue-900 text-cyan-600 dark:text-cyan-400 w-6 h-6 flex items-center justify-center rounded text-[10px]"
+                                            title="Edit Selected Category">
+                                        <i aria-hidden="true" class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button"
+                                            id="quick-delete-category-btn"
+                                            class="arcade-btn bg-surface hover:bg-rose-200 dark:hover:bg-rose-950 text-rose-500 dark:text-rose-400 w-6 h-6 flex items-center justify-center rounded text-[10px]"
+                                            title="Delete Selected Category">
+                                        <i aria-hidden="true" class="fa-solid fa-trash"></i>
+                                    </button>
+                                    <button type="button"
+                                            id="quick-forge-category-btn"
+                                            class="arcade-btn bg-surface hover:bg-emerald-200 dark:hover:bg-emerald-950 text-emerald-600 dark:text-emerald-400 w-6 h-6 flex items-center justify-center rounded text-[10px]"
+                                            title="Forge New Category">
+                                        <i aria-hidden="true" class="fa-solid fa-plus"></i>
+                                    </button>
+                                </div>
+
+                                <div class="flex items-center gap-1.5 shrink-0 ml-auto">
+
+                                    <button id="duplicate-note-btn"
+                                            class="arcade-btn bg-surface hover:bg-cyan-100 dark:hover:bg-cyan-900/40 px-2 sm:px-2.5 h-7 rounded-lg text-xs font-mono flex items-center gap-1 shrink-0"
+                                            title="Duplicate Scroll">
+                                        <i aria-hidden="true" class="fa-solid fa-clone text-blue-600 dark:text-cyan-400"></i>
+                                        <span class="hidden md:inline">Duplikat</span>
+                                    </button>
+
+                                    <div class="relative inline-block text-left shrink-0" id="export-dropdown-wrapper">
+                                        <button id="export-note-btn"
+                                                class="arcade-btn bg-surface hover:bg-blue-200 dark:hover:bg-blue-800 px-2 sm:px-2.5 h-7 rounded-lg text-xs font-mono flex items-center gap-1"
+                                                title="Export Scroll">
+                                            <i aria-hidden="true" class="fa-solid fa-file-arrow-down text-blue-600 dark:text-blue-400"></i>
+                                            <span class="hidden md:inline">Ekspor</span>
+                                        </button>
+                                        <div id="export-menu" class="hidden fixed z-[99999] w-48 bg-[var(--bg-surface)] border-2 border-black rounded-lg shadow-[3px_3px_0px_#000] p-1 font-mono text-xs">
+                                            <button data-export-format="md" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-brands fa-markdown text-blue-600 dark:text-blue-400"></i> Markdown (.md)
+                                            </button>
+                                            <button data-export-format="html" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-code text-blue-600 dark:text-cyan-400"></i> HTML (.html)
+                                            </button>
+                                            <button data-export-format="txt" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-file-lines text-amber-600 dark:text-amber-400"></i> Text (.txt)
+                                            </button>
+                                            <button data-export-format="csv" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-file-csv text-emerald-600 dark:text-emerald-400"></i> CSV Table (.csv)
+                                            </button>
+                                            <button data-export-format="json" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-file-code text-cyan-600 dark:text-cyan-400"></i> JSON Backup (.json)
+                                            </button>
+                                            <div class="border-t border-black/20 my-1"></div>
+                                            <button id="copy-plain-btn" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-file-lines text-amber-600 dark:text-amber-400"></i> Copy Plain Text
+                                            </button>
+                                            <button id="copy-markdown-btn" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-copy text-blue-600 dark:text-cyan-400"></i> Copy Markdown
+                                            </button>
+                                            <button id="copy-html-btn" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-code text-emerald-600 dark:text-emerald-400"></i> Copy HTML
+                                            </button>
+                                            <button id="copy-json-btn" class="w-full text-left px-2 py-1 rounded hover:bg-blue-600 hover:text-white flex items-center gap-2">
+                                                <i aria-hidden="true" class="fa-solid fa-cube text-purple-600 dark:text-purple-400"></i> Copy JSON
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <button id="zen-mode-btn"
+                                            class="arcade-btn bg-surface hover:bg-purple-100 dark:hover:bg-purple-900/40 px-2 sm:px-2.5 h-7 rounded-lg text-xs font-mono flex items-center gap-1 shrink-0"
+                                            title="Toggle Distraction-Free Zen Writing Mode">
+                                        <i aria-hidden="true" class="fa-solid fa-expand text-purple-600 dark:text-purple-400"></i>
+                                        <span class="hidden md:inline">Zen</span>
+                                    </button>
+
+                                    <button id="archive-note-btn"
+                                            class="arcade-btn bg-surface hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2 sm:px-2.5 h-7 rounded-lg text-xs font-mono flex items-center gap-1 shrink-0"
+                                            title="Archive Scroll to Library Vault">
+                                        <i aria-hidden="true" class="fa-solid fa-box-archive text-amber-600 dark:text-amber-400"></i>
+                                        <span class="hidden md:inline">Arsip</span>
+                                    </button>
+
+                                    <button id="delete-note-btn"
+                                            class="arcade-btn bg-rose-600 hover:bg-rose-500 text-white px-2.5 sm:px-3 h-7 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center justify-center shrink-0"
+                                            title="Banish Scroll to Digital Void">
+                                        <i aria-hidden="true" class="fa-solid fa-trash-can mr-1"></i> DELETE
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="find-replace-bar" class="shrink-0 hidden p-2 bg-surface-alt border-2 border-black dark:border-blue-700 rounded-lg flex items-center justify-between gap-2 flex-wrap shadow-[3px_3px_0px_#000] text-xs font-mono">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <div class="flex items-center gap-1 bg-surface px-2 py-1 rounded border border-black/30">
+                            <i aria-hidden="true" class="fa-solid fa-magnifying-glass text-blue-600 dark:text-cyan-400"></i>
+                            <input id="find-input" type="text" placeholder="Find in scroll..." class="bg-transparent border-0 focus:outline-none w-32 sm:w-44 text-xs">
+                        </div>
+                        <div class="flex items-center gap-1 bg-surface px-2 py-1 rounded border border-black/30">
+                            <i aria-hidden="true" class="fa-solid fa-repeat text-amber-600 dark:text-amber-400"></i>
+                            <input id="replace-input" type="text" placeholder="Replace with..." class="bg-transparent border-0 focus:outline-none w-32 sm:w-44 text-xs">
+                        </div>
+                        <span id="find-match-badge" class="px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-950 dark:text-blue-100 text-[10px] font-bold">0 matches</span>
+                        <button id="find-prev-btn" class="arcade-btn bg-surface px-2 py-0.5 rounded text-[10px]" title="Previous match"><i aria-hidden="true" class="fa-solid fa-arrow-up"></i></button>
+                        <button id="find-next-btn" class="arcade-btn bg-surface px-2 py-0.5 rounded text-[10px]" title="Next match"><i aria-hidden="true" class="fa-solid fa-arrow-down"></i></button>
+                        <button id="replace-one-btn" class="arcade-btn bg-amber-600 hover:bg-amber-500 text-white px-2 py-0.5 rounded text-[10px]">Replace</button>
+                        <button id="replace-all-btn" class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white px-2 py-0.5 rounded text-[10px]">Replace All</button>
+                    </div>
+                    <button id="close-find-bar-btn" class="arcade-btn bg-red-600 hover:bg-red-500 text-white px-2 py-0.5 rounded text-[10px]" title="Close Find Bar">
+                        <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div id="table-toolkit-bar" class="shrink-0 hidden p-2 bg-surface-alt border-2 border-black dark:border-blue-700 rounded-lg flex items-center justify-between gap-2 overflow-x-auto no-scrollbar touch-pan-x flex-nowrap sm:flex-wrap shadow-[3px_3px_0px_#000] text-xs font-mono select-none transition-all w-full min-w-0">
+
+                    <div class="flex items-center gap-1.5 flex-nowrap sm:flex-wrap shrink-0">
+                        <div class="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-100 dark:bg-blue-950/80 border border-blue-400 dark:border-blue-700 text-blue-900 dark:text-cyan-300">
+                            <i aria-hidden="true" class="fa-solid fa-table text-blue-600 dark:text-cyan-400"></i>
+                            <span class="font-pixel text-[10px] hidden sm:inline">TABLE MATRIX</span>
+                            <span id="table-cell-coord" class="font-bold text-[10px] font-mono text-cyan-700 dark:text-cyan-300">R1:C1</span>
+                        </div>
+
+                        <div class="flex items-center gap-0.5 bg-surface p-0.5 rounded border border-black/20 dark:border-blue-900">
+                            <button id="table-add-row-above-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Tambah Baris di Atas">
+                                <i aria-hidden="true" class="fa-solid fa-arrow-up text-cyan-600 dark:text-cyan-400 sm:mr-1"></i><span class="hidden md:inline">+Baris ↑</span>
+                            </button>
+                            <button id="table-add-row-below-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Tambah Baris di Bawah">
+                                <i aria-hidden="true" class="fa-solid fa-arrow-down text-cyan-600 dark:text-cyan-400 sm:mr-1"></i><span class="hidden md:inline">+Baris ↓</span>
+                            </button>
+                            <button id="table-del-row-btn" type="button" class="arcade-btn bg-surface hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 px-2 py-1 rounded text-[11px]" title="Hapus Baris Aktif">
+                                <i aria-hidden="true" class="fa-solid fa-trash-can sm:mr-1"></i><span class="hidden md:inline">-Baris</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-0.5 bg-surface p-0.5 rounded border border-black/20 dark:border-blue-900">
+                            <button id="table-add-col-left-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Tambah Kolom di Kiri">
+                                <i aria-hidden="true" class="fa-solid fa-arrow-left text-blue-600 dark:text-blue-400 sm:mr-1"></i><span class="hidden md:inline">+Kolom ←</span>
+                            </button>
+                            <button id="table-add-col-right-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Tambah Kolom di Kanan">
+                                <i aria-hidden="true" class="fa-solid fa-arrow-right text-blue-600 dark:text-blue-400 sm:mr-1"></i><span class="hidden md:inline">+Kolom →</span>
+                            </button>
+                            <button id="table-del-col-btn" type="button" class="arcade-btn bg-surface hover:bg-red-100 dark:hover:bg-red-950/50 text-red-600 dark:text-red-400 px-2 py-1 rounded text-[11px]" title="Hapus Kolom Aktif">
+                                <i aria-hidden="true" class="fa-solid fa-trash-can sm:mr-1"></i><span class="hidden md:inline">-Kolom</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-0.5 bg-surface p-0.5 rounded border border-black/20 dark:border-blue-900">
+                            <button id="table-toggle-header-btn" type="button" class="arcade-btn bg-surface hover:bg-amber-100 dark:hover:bg-amber-950/50 text-amber-600 dark:text-amber-400 px-2 py-1 rounded text-[11px]" title="Toggle Header (TH / TD)">
+                                <i aria-hidden="true" class="fa-solid fa-heading sm:mr-1"></i><span class="hidden lg:inline">TH/TD</span>
+                            </button>
+                            <button id="table-align-left-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-1.5 py-1 rounded text-[11px]" title="Rata Kiri">
+                                <i aria-hidden="true" class="fa-solid fa-align-left"></i>
+                            </button>
+                            <button id="table-align-center-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-1.5 py-1 rounded text-[11px]" title="Rata Tengah">
+                                <i aria-hidden="true" class="fa-solid fa-align-center"></i>
+                            </button>
+                            <button id="table-align-right-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-1.5 py-1 rounded text-[11px]" title="Rata Kanan">
+                                <i aria-hidden="true" class="fa-solid fa-align-right"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-1.5 bg-surface px-2 py-0.5 rounded border border-black/20 dark:border-blue-900">
+
+                            <label class="flex items-center gap-1 cursor-pointer" title="Warna Latar Sel (Background Color)">
+                                <i aria-hidden="true" class="fa-solid fa-fill-drip text-[10px] text-cyan-600 dark:text-cyan-400"></i>
+                                <input id="table-cell-bg-picker" type="color" value="#1e3a8a" class="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent">
+                            </label>
+
+                            <label class="flex items-center gap-1 cursor-pointer" title="Warna Teks Sel (Text Color)">
+                                <i aria-hidden="true" class="fa-solid fa-font text-[10px] text-amber-500"></i>
+                                <input id="table-cell-text-picker" type="color" value="#ffffff" class="w-4 h-4 p-0 border-0 rounded cursor-pointer bg-transparent">
+                            </label>
+                            <button id="table-clear-colors-btn" type="button" class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 text-[10px] px-1 py-0.5 rounded" title="Reset Warna Sel ke Normal">
+                                <i aria-hidden="true" class="fa-solid fa-rotate-left"></i>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <button id="table-insert-img-btn" type="button" class="arcade-btn bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded text-[11px] font-mono shadow-[1px_1px_0px_#000]" title="Sisipkan Gambar ke Sel Aktif">
+                                <i aria-hidden="true" class="fa-solid fa-file-image mr-1 text-emerald-200"></i>+Gambar Sel
+                            </button>
+                            <input id="table-cell-img-input" type="file" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button id="table-delete-table-btn" type="button" class="arcade-btn bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded text-[11px] font-mono shadow-[1px_1px_0px_#000]" title="Hapus Keseluruhan Tabel">
+                            <i aria-hidden="true" class="fa-solid fa-trash mr-1"></i>Hapus Tabel
+                        </button>
+                        <button id="table-close-toolkit-btn" type="button" class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 px-2 py-1 rounded text-[10px]" title="Tutup Toolbar Tabel">
+                            <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="image-toolkit-bar" class="shrink-0 hidden p-2 bg-surface-alt border-2 border-black dark:border-blue-700 rounded-lg flex items-center justify-between gap-2 overflow-x-auto no-scrollbar touch-pan-x flex-nowrap sm:flex-wrap shadow-[3px_3px_0px_#000] text-xs font-mono select-none transition-all w-full min-w-0">
+
+                    <div class="flex items-center gap-1.5 flex-nowrap sm:flex-wrap shrink-0">
+                        <div class="flex items-center gap-1.5 px-2 py-1 rounded bg-blue-100 dark:bg-blue-950/80 border border-blue-400 dark:border-blue-700 text-blue-900 dark:text-cyan-300">
+                            <i aria-hidden="true" class="fa-solid fa-image text-blue-600 dark:text-cyan-400"></i>
+                            <span class="font-pixel text-[10px] hidden sm:inline">IMAGE MATRIX</span>
+                            <span id="image-align-badge" class="font-bold text-[10px] font-mono text-cyan-700 dark:text-cyan-300 uppercase">CENTER</span>
+                        </div>
+
+                        <div class="flex items-center gap-0.5 bg-surface p-0.5 rounded border border-black/20 dark:border-blue-900">
+                            <button id="img-align-left-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Ratakan Gambar ke Kiri">
+                                <i aria-hidden="true" class="fa-solid fa-align-left text-cyan-600 dark:text-cyan-400 sm:mr-1"></i><span class="hidden md:inline">Kiri</span>
+                            </button>
+                            <button id="img-align-center-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Ratakan Gambar ke Tengah">
+                                <i aria-hidden="true" class="fa-solid fa-align-center text-cyan-600 dark:text-cyan-400 sm:mr-1"></i><span class="hidden md:inline">Tengah</span>
+                            </button>
+                            <button id="img-align-right-btn" type="button" class="arcade-btn bg-surface hover:bg-blue-100 dark:hover:bg-blue-900/60 px-2 py-1 rounded text-[11px]" title="Ratakan Gambar ke Kanan">
+                                <i aria-hidden="true" class="fa-solid fa-align-right text-cyan-600 dark:text-cyan-400 sm:mr-1"></i><span class="hidden md:inline">Kanan</span>
+                            </button>
+                        </div>
+
+                        <div class="flex items-center gap-1">
+                            <button id="img-caption-btn" type="button" class="arcade-btn bg-surface hover:bg-amber-100 dark:hover:bg-amber-950/60 text-amber-700 dark:text-amber-400 px-2.5 py-1 rounded text-[11px] font-mono border border-amber-300 dark:border-amber-700/60 shadow-[1px_1px_0px_#000]" title="Beri atau Ubah Caption Gambar">
+                                <i aria-hidden="true" class="fa-solid fa-comment-dots mr-1"></i><span class="inline">Beri Caption</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-1">
+                        <button id="img-delete-btn" type="button" class="arcade-btn bg-red-600 hover:bg-red-500 text-white px-2.5 py-1 rounded text-[11px] font-mono shadow-[1px_1px_0px_#000]" title="Hapus Gambar Terpilih">
+                            <i aria-hidden="true" class="fa-solid fa-trash mr-1"></i>Hapus Gambar
+                        </button>
+                        <button id="close-image-bar-btn" type="button" class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 px-2 py-1 rounded text-[10px]" title="Tutup Toolbar Gambar">
+                            <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="editor-canvas-card" class="arcade-card flex-1 min-h-[300px] sm:min-h-[450px] lg:min-h-[600px] p-3 sm:p-5 lg:p-7 rounded-2xl relative shadow-[4px_4px_0px_#000] bg-[var(--bg-surface)] flex flex-col">
+                    <div id="editor-zoom-wrapper" class="zoom-canvas-container min-h-full flex flex-col">
+
+                        <div id="editor-content"
+                             contenteditable="{activeNote ? 'true' : 'false'}"
+                             spellcheck="false"
+                             class="notenux-editor prose dark:prose-invert max-w-none focus:outline-none min-h-[250px] sm:min-h-[350px] flex-1 break-words overflow-x-hidden"
+                             style="font-family: 'Modern Sans', sans-serif; font-size: 16px;">
+                            {#if !activeNote}
+                                <div class="flex flex-col items-center justify-center min-h-[300px] text-center text-slate-400 p-8 space-y-3 font-mono select-none">
+                                    <i aria-hidden="true" class="fa-solid fa-scroll text-4xl text-blue-500/40"></i>
+                                    <p class="font-bold text-sm text-slate-600 dark:text-slate-300">Belum ada catatan.</p>
+                                    <p class="text-xs">Klik tombol di bawah atau tekan <kbd class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 border text-[10px]">Ctrl+N</kbd> untuk mulai membuat catatan baru.</p>
+                                    <button type="button" id="empty-state-new-btn" class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white font-mono text-xs px-4 py-2 rounded shadow-[2px_2px_0px_#000] cursor-pointer mt-2 inline-flex items-center gap-2">
+                                        <i aria-hidden="true" class="fa-solid fa-plus"></i> Buat Catatan Baru
+                                    </button>
+                                </div>
+                            {/if}
+                        </div>
+
+                        <textarea id="markdown-raw-editor"
+                                  spellcheck="false"
+                                  class="hidden w-full h-[500px] p-4 font-mono text-sm bg-black/80 text-cyan-300 border-2 border-cyan-500 rounded-lg focus:outline-none leading-relaxed resize-y"></textarea>
+
+                        <div id="plain-text-container" class="hidden flex flex-col flex-1 min-h-[420px]">
+
+                            <div class="bg-surface-alt border-2 border-black dark:border-emerald-700 rounded-t-lg p-2.5 flex items-center justify-between gap-2 flex-wrap shadow-[2px_2px_0px_#000]">
+                                <div class="flex items-center gap-2.5 flex-wrap">
+                                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-600 text-white font-mono text-xs font-bold shadow-[1px_1px_0px_#000]">
+                                        <i aria-hidden="true" class="fa-solid fa-file-lines"></i>
+                                        <span>NOTEPAD</span>
+                                    </div>
+                                    <span class="text-xs font-mono text-black/70 dark:text-emerald-300 font-semibold hidden sm:inline">Mode Teks Biasa (Tanpa Format)</span>
+                                    <div class="text-[11px] font-mono text-black/60 dark:text-emerald-400/90 flex items-center gap-1.5 bg-surface px-2 py-0.5 rounded border border-black/10 dark:border-emerald-900/50">
+                                        <span id="plain-text-char-count">0 karakter</span>
+                                        <span>•</span>
+                                        <span id="plain-text-word-count">0 kata</span>
+                                        <span>•</span>
+                                        <span id="plain-text-line-count">1 baris</span>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+
+                                    <button id="plain-text-copy-btn"
+                                            type="button"
+                                            class="arcade-btn bg-emerald-600 hover:bg-emerald-500 active:translate-y-0.5 text-white px-2.5 sm:px-3 py-1 rounded text-xs font-mono font-bold flex items-center gap-1.5 shadow-[2px_2px_0px_#000]"
+                                            title="Salin seluruh teks ke clipboard">
+                                        <i aria-hidden="true" class="fa-solid fa-copy"></i>
+                                        <span class="copy-text-label">Copy Semua Teks</span>
+                                    </button>
+
+                                    <button id="plain-text-clear-btn"
+                                            type="button"
+                                            class="arcade-btn bg-surface hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-400 px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1 shadow-[1px_1px_0px_#000]"
+                                            title="Kosongkan Notepad (Clear Text)">
+                                        <i aria-hidden="true" class="fa-solid fa-trash-can"></i>
+                                        <span class="hidden sm:inline">Bersihkan</span>
+                                    </button>
+
+                                    <button id="plain-text-exit-btn"
+                                            type="button"
+                                            class="arcade-btn bg-surface hover:bg-gray-200 dark:hover:bg-slate-800 text-black dark:text-white px-2.5 py-1 rounded text-xs font-mono flex items-center gap-1 shadow-[1px_1px_0px_#000]"
+                                            title="Kembali ke Mode Rich Editor">
+                                        <i aria-hidden="true" class="fa-solid fa-arrow-left"></i>
+                                        <span class="hidden sm:inline">Rich Editor</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <textarea id="plain-text-editor"
+                                      spellcheck="false"
+                                      class="w-full flex-1 min-h-[400px] p-4 font-mono text-sm bg-white dark:bg-[#0c1319] text-gray-900 dark:text-emerald-300 border-2 border-t-0 border-black dark:border-emerald-700 rounded-b-lg focus:outline-none focus:ring-0 leading-relaxed resize-y selection:bg-emerald-400 selection:text-black font-mono"
+                                      style="font-family: 'Fira Code', 'Courier New', Courier, monospace; font-size: 14px;"
+                                      placeholder="Mulai menulis teks biasa di sini seperti di Notepad... Tidak ada format teks apa pun di dalam mode ini dan siap di-copy keseluruhan."></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="arcade-card p-2 rounded-lg flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono opacity-80 shadow-[2px_2px_0px_#000]">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span>Status: <strong class="text-emerald-700 dark:text-emerald-400 font-bold">Aktif</strong></span>
+                        <span class="hidden sm:inline">| Cloud Storage: <strong class="text-blue-600 dark:text-cyan-400 font-bold">Tersinkronisasi</strong></span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span><i aria-hidden="true" class="fa-solid fa-file-code text-blue-600 dark:text-cyan-400 mr-1"></i> Markdown & Rich Editor</span>
+                        <span class="hidden sm:inline">| Auto-Save Aktif</span>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <div id="chunk-inspector-modal"
+         class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-2xl bg-[var(--bg-surface)] rounded-xl border-4 border-black dark:border-cyan-500 shadow-[8px_8px_0px_#000] flex flex-col max-h-[85vh] overflow-hidden">
+
+            <div class="p-3.5 sm:p-4 border-b-2 border-black dark:border-blue-800 bg-blue-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-cubes text-xl"></i>
+                    <div>
+                        <h3 class="font-pixel text-xs sm:text-sm tracking-wider">DATABASE CHUNK TELEMETRY</h3>
+                        <p class="text-[10px] font-mono text-cyan-200">Otomatis dipartisi di backend untuk performa & pencegahan overload memori</p>
+                    </div>
+                </div>
+                <button id="chunk-modal-close" class="arcade-btn bg-black text-white hover:bg-gray-800 px-2.5 py-1 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark mr-1"></i> ESC
+                </button>
+            </div>
+
+            <div class="px-4 py-2 bg-surface-alt border-b border-black/10 dark:border-white/10 flex items-center justify-between font-mono text-xs flex-wrap gap-2">
+                <div class="flex items-center gap-3">
+                    <span id="chunk-modal-count" class="font-bold text-blue-600 dark:text-cyan-400">Loading chunks...</span>
+                    <span id="chunk-modal-bytes" class="opacity-75">0 Bytes</span>
+                </div>
+                <button id="verify-chunks-btn" type="button" class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white px-2.5 py-1 rounded text-xs font-mono font-bold flex items-center gap-1.5 shadow-[1px_1px_0px_#000]">
+                    <i aria-hidden="true" class="fa-solid fa-shield-halved text-cyan-300"></i> Verify Integrity
+                </button>
+                <span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                    <i aria-hidden="true" class="fa-solid fa-bolt mr-1"></i> Auto-Chunked Backend Performance
+                </span>
+            </div>
+
+            <div id="chunk-verify-status" class="hidden px-4 py-2 text-xs font-mono border-b border-black/10"></div>
+
+            <div id="chunk-modal-content" class="p-4 overflow-y-auto flex-1 space-y-2">
+
+            </div>
+
+            <div class="p-3 border-t-2 border-black dark:border-blue-800 bg-surface-alt flex items-center justify-between text-[11px] font-mono">
+                <span class="opacity-80">Setiap chunk memiliki identitas unik: <code class="text-cyan-600 dark:text-cyan-400">chunk_uid</code></span>
+                <button onclick={() => { window.notenux.closeChunkInspector() }} class="arcade-btn bg-blue-600 text-white px-3 py-1 rounded text-xs">
+                    TUTUP
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="import-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-lg bg-[var(--bg-surface)] rounded-xl border-4 border-black dark:border-cyan-500 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-emerald-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-file-import text-lg"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">IMPORT SCROLL</h3>
+                </div>
+                <button aria-label="Tutup panel" id="close-import-modal-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-3 font-mono text-xs">
+                <div>
+                    <label for="import-file-input" class="block font-bold mb-1"><i aria-hidden="true" class="fa-solid fa-file-arrow-up mr-1 text-emerald-500"></i> Upload Markdown / Text / JSON File (.md, .txt, .json)</label>
+                    <input type="file" id="import-file-input" accept=".md,.markdown,.txt,.json" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs cursor-pointer">
+                </div>
+                <div class="text-center font-bold text-gray-400 text-[10px]">--- OR PASTE RAW MARKDOWN CONTENT ---</div>
+                <div>
+                    <textarea id="import-raw-content" rows="5" placeholder="# Enter or paste your scroll content here..." class="w-full p-2 bg-surface-alt border border-black/30 rounded focus:outline-none text-xs font-mono resize-y"></textarea>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label for="import-title-input" class="block font-bold mb-1">Scroll Title (Optional)</label>
+                        <input type="text" id="import-title-input" placeholder="Auto-detected if empty" class="w-full p-1.5 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                    </div>
+                    <div>
+                        <label for="import-category-select" class="block font-bold mb-1">Category</label>
+                        <select id="import-category-select" class="w-full p-1.5 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                            {#if data.categories?.length}
+                                {#each data.categories as category}
+                                    <option value="{category.slug}">{category.name}</option>
+                                {/each}
+                            {:else}
+                                <option value="catatan">Catatan</option>
+                                <option value="tugas">Tugas</option>
+                            {/if}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 border-t-2 border-black/10 bg-surface-alt flex justify-end gap-2">
+                <button id="cancel-import-btn" class="arcade-btn bg-surface px-3 py-1 rounded text-xs font-mono">Cancel</button>
+                <button id="confirm-import-btn" class="arcade-btn bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-file-import mr-1"></i> IMPORT NASKAH
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="shortcuts-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-xl bg-[var(--bg-surface)] rounded-xl border-4 border-black dark:border-cyan-500 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-blue-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-gamepad text-lg text-yellow-400"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">ARCADE SHORTCUT CHEAT SHEET</h3>
+                </div>
+                <button aria-label="Tutup panel" id="close-shortcuts-modal-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-4 space-y-2.5 font-mono text-xs overflow-y-auto max-h-[70vh]">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Save Active Scroll</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + S</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>New Scroll</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + N</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Find & Replace</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + F</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Duplicate Scroll</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + D</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Toggle RAW MD Mode</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + M</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Mode Notepad (Teks Biasa)</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-emerald-400 border border-emerald-500 text-[10px]">Alt + N</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Export Scroll</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + E</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Zen Focus Mode</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Alt + Z</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Tebal (Bold)</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + B</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Batal (Undo)</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + Z</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Ulangi (Redo)</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">Ctrl + Y / Ctrl + Shift + Z</kbd>
+                    </div>
+                    <div class="p-2 rounded bg-surface-alt border border-black/20 flex items-center justify-between">
+                        <span>Cheat Sheet (This)</span>
+                        <kbd class="px-1.5 py-0.5 rounded bg-black text-cyan-300 border border-cyan-500 text-[10px]">? or F1</kbd>
+                    </div>
+                </div>
+            </div>
+            <div class="p-3 border-t-2 border-black/10 bg-surface-alt flex justify-end">
+                <button onclick={() => { document.getElementById('shortcuts-modal')?.classList.add('hidden') }} class="arcade-btn bg-blue-600 text-white px-3 py-1 rounded text-xs font-mono">
+                    READY TO QUEST
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="delete-confirm-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-2xl border-4 border-rose-600 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden animate-pop-in">
+
+            <div class="p-3.5 sm:p-4 bg-rose-600 text-white flex items-center justify-between border-b-2 border-black">
+                <div class="flex items-center gap-2 font-mono font-bold">
+                    <i aria-hidden="true" class="fa-solid fa-triangle-exclamation text-lg text-yellow-300 animate-pulse"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">BANISH SCROLL CONFIRMATION</h3>
+                </div>
+                <button id="close-delete-modal-x" class="arcade-btn bg-black text-white hover:bg-gray-800 px-2 py-0.5 rounded text-xs font-mono" title="Abort (ESC)">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 font-mono text-xs">
+                <div class="text-center py-1">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-950/70 border-2 border-rose-500 text-rose-600 dark:text-rose-400 mb-3 shadow-[2px_2px_0px_#000]">
+                        <i aria-hidden="true" class="fa-solid fa-skull-crossbones text-2xl"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-rose-600 dark:text-rose-400 mb-1">Banish Scroll to Digital Void?</h4>
+                    <p class="text-xs opacity-80 max-w-xs mx-auto">
+                        Tindakan ini tidak dapat dibatalkan. Catatan ini beserta seluruh isinya akan dihapus secara permanen dari penyimpanan.
+                    </p>
+                </div>
+
+                <div class="p-3 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-900 rounded-xl">
+                    <div class="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1 flex items-center gap-1.5">
+                        <i aria-hidden="true" class="fa-solid fa-scroll"></i> TARGET SCROLL:
+                    </div>
+                    <div id="delete-modal-scroll-title" class="font-bold text-sm text-rose-800 dark:text-rose-200 truncate">
+                        Scroll Title
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-shield-halved text-amber-500 shrink-0"></i>
+                    <span>Seluruh data catatan akan dibersihkan secara aman dari database.</span>
+                </div>
+            </div>
+
+            <div class="p-3.5 border-t-2 border-black/10 dark:border-white/10 bg-surface-alt flex items-center justify-end gap-2.5">
+                <button id="cancel-delete-modal-btn" class="arcade-btn bg-surface hover:bg-gray-200 dark:hover:bg-slate-800 px-4 py-2 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow-[2px_2px_0px_#000]">
+                    <kbd class="px-1 py-0.5 rounded bg-black/10 dark:bg-white/10 text-[10px]">ESC</kbd>
+                    <span>ABORT</span>
+                </button>
+                <button id="confirm-delete-modal-btn" class="arcade-btn bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5">
+                    <i aria-hidden="true" class="fa-solid fa-fire"></i>
+                    <span>YES, BANISH SCROLL</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="bulk-delete-notes-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-2xl border-4 border-rose-600 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden animate-pop-in">
+
+            <div class="p-3.5 sm:p-4 bg-rose-600 text-white flex items-center justify-between border-b-2 border-black">
+                <div class="flex items-center gap-2 font-mono font-bold">
+                    <i aria-hidden="true" class="fa-solid fa-triangle-exclamation text-lg text-yellow-300 animate-pulse"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">BANISH MULTIPLE SCROLLS</h3>
+                </div>
+                <button id="close-bulk-delete-notes-x" class="arcade-btn bg-black text-white hover:bg-gray-800 px-2 py-0.5 rounded text-xs font-mono" title="Abort (ESC)">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 space-y-4 font-mono text-xs">
+                <div class="text-center py-1">
+                    <div class="inline-flex items-center justify-center w-14 h-14 rounded-full bg-rose-100 dark:bg-rose-950/70 border-2 border-rose-500 text-rose-600 dark:text-rose-400 mb-3 shadow-[2px_2px_0px_#000]">
+                        <i aria-hidden="true" class="fa-solid fa-dumpster-fire text-2xl"></i>
+                    </div>
+                    <h4 class="text-sm font-bold text-rose-600 dark:text-rose-400 mb-1">Banish Selected Scrolls to Void?</h4>
+                    <p class="text-xs opacity-80 max-w-xs mx-auto">
+                        Tindakan ini permanen. Semua gulungan catatan terpilih beserta seluruh data fragmen/chunk akan dibersihkan dari database.
+                    </p>
+                </div>
+
+                <div class="p-3 bg-rose-50 dark:bg-rose-950/40 border-2 border-rose-300 dark:border-rose-900 rounded-xl">
+                    <div class="text-[10px] uppercase font-bold text-rose-500 tracking-wider mb-1 flex items-center gap-1.5">
+                        <i aria-hidden="true" class="fa-solid fa-scroll"></i> TOTAL TARGET:
+                    </div>
+                    <div id="bulk-delete-notes-count-badge" class="font-bold text-sm text-rose-800 dark:text-rose-200">
+                        0 Gulungan Terpilih
+                    </div>
+                </div>
+
+                <div class="p-2.5 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-lg text-[11px] text-amber-800 dark:text-amber-200 flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-shield-halved text-amber-500 shrink-0"></i>
+                    <span>Tindakan multiple delete bersifat atomik dan aman dari fragmentasi data.</span>
+                </div>
+            </div>
+
+            <div class="p-3.5 border-t-2 border-black/10 dark:border-white/10 bg-surface-alt flex items-center justify-end gap-2.5">
+                <button id="cancel-bulk-delete-notes-btn" class="arcade-btn bg-surface hover:bg-gray-200 dark:hover:bg-slate-800 px-4 py-2 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 shadow-[2px_2px_0px_#000]">
+                    <span>BATAL</span>
+                </button>
+                <button id="confirm-bulk-delete-notes-btn" class="arcade-btn bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-xs font-mono font-bold tracking-wider flex items-center gap-2 shadow-[2px_2px_0px_#000] active:translate-y-0.5">
+                    <i aria-hidden="true" class="fa-solid fa-fire"></i>
+                    <span>BANISH SELECTED</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quick-edit-category-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-cyan-500 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-blue-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-pen-to-square text-lg text-cyan-300"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">EDIT CATEGORY</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-quick-edit-cat-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="quick-edit-category-form" class="p-4 space-y-3 font-mono text-xs">
+                <input type="hidden" id="quick-edit-cat-id">
+                <div>
+                    <label for="quick-edit-cat-name" class="block font-bold mb-1">Category Name <span class="text-rose-500">*</span></label>
+                    <input type="text" id="quick-edit-cat-name" required class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-cyan-400">
+                </div>
+
+                <div>
+                    <label for="quick-edit-cat-slug" class="block font-bold mb-1">Slug / Identifier</label>
+                    <input type="text" id="quick-edit-cat-slug" placeholder="Auto-maintained if unchanged" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-cyan-400">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label for="quick-edit-cat-color" class="block font-bold mb-1">Color Palette</label>
+                        <select id="quick-edit-cat-color" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                            <option value="cyan">Neon Cyan</option>
+                            <option value="blue">Arcade Blue</option>
+                            <option value="emerald">Emerald Glow</option>
+                            <option value="amber">Pixel Gold</option>
+                            <option value="rose">Crimson Red</option>
+                            <option value="purple">Arcane Purple</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="quick-edit-cat-icon" class="block font-bold mb-1">Icon (Font Awesome)</label>
+                        <input type="text" id="quick-edit-cat-icon" placeholder="fa-solid fa-..." class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="quick-edit-cat-desc" class="block font-bold mb-1">Description (Optional)</label>
+                    <textarea id="quick-edit-cat-desc" rows="2" placeholder="Brief category description..." class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none resize-y"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-black/10">
+                    <button type="button" id="cancel-quick-edit-cat-btn" class="arcade-btn bg-surface px-3 py-1.5 rounded text-xs">Cancel</button>
+                    <button type="submit" class="arcade-btn bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-1.5 rounded text-xs font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-check mr-1"></i> SAVE CHANGES
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="quick-delete-category-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-rose-600 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-rose-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-triangle-exclamation text-lg text-yellow-300"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">BANISH CATEGORY</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-quick-delete-cat-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-3 font-mono text-xs">
+                <input type="hidden" id="quick-delete-cat-id">
+                <p>Are you sure you want to dismantle category <span id="quick-delete-cat-name-badge" class="font-bold text-rose-500"></span>?</p>
+                <div class="p-2.5 bg-rose-100 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 rounded text-rose-900 dark:text-rose-200 text-[11px]">
+                    <i aria-hidden="true" class="fa-solid fa-triangle-exclamation text-rose-500 mr-1"></i>
+                    <strong>Peringatan / Warning:</strong> Semua scroll dan catatan yang terhubung dengan kategori ini akan otomatis ikut terhapus secara permanen.
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-black/10 bg-surface-alt flex justify-end gap-2 font-mono text-xs">
+                <button type="button" id="cancel-quick-delete-cat-btn" class="arcade-btn bg-surface px-3 py-1.5 rounded">Cancel</button>
+                <button type="button" id="confirm-quick-delete-cat-btn" class="arcade-btn bg-rose-600 hover:bg-rose-500 text-white px-4 py-1.5 rounded font-bold">
+                    <i aria-hidden="true" class="fa-solid fa-trash mr-1"></i> YES, BANISH CATEGORY
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="quick-forge-category-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-emerald-500 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-emerald-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-wand-sparkles text-lg text-emerald-200"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">FORGE NEW CATEGORY</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-quick-forge-cat-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="quick-forge-category-form" class="p-4 space-y-3 font-mono text-xs">
+                <div>
+                    <label for="quick-forge-cat-name" class="block font-bold mb-1">Category Name <span class="text-rose-500">*</span></label>
+                    <input type="text" id="quick-forge-cat-name" required placeholder="e.g. Alchemy, Boss Tactics" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-emerald-400">
+                </div>
+
+                <div>
+                    <label for="quick-forge-cat-slug" class="block font-bold mb-1">Slug / Identifier (Optional)</label>
+                    <input type="text" id="quick-forge-cat-slug" placeholder="Auto-generated if empty" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-emerald-400">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label for="quick-forge-cat-color" class="block font-bold mb-1">Color Palette</label>
+                        <select id="quick-forge-cat-color" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                            <option value="cyan">Neon Cyan</option>
+                            <option value="blue">Arcade Blue</option>
+                            <option value="emerald" selected>Emerald Glow</option>
+                            <option value="amber">Pixel Gold</option>
+                            <option value="rose">Crimson Red</option>
+                            <option value="purple">Arcane Purple</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="quick-forge-cat-icon" class="block font-bold mb-1">Icon (Font Awesome)</label>
+                        <input type="text" id="quick-forge-cat-icon" value="fa-solid fa-folder" placeholder="fa-solid fa-folder" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label for="quick-forge-cat-desc" class="block font-bold mb-1">Description (Optional)</label>
+                    <textarea id="quick-forge-cat-desc" rows="2" placeholder="Brief description of this category..." class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none resize-y"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-black/10">
+                    <button type="button" id="cancel-quick-forge-cat-btn" class="arcade-btn bg-surface px-3 py-1.5 rounded text-xs">Cancel</button>
+                    <button type="submit" class="arcade-btn bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1.5 rounded text-xs font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-hammer mr-1"></i> FORGE CATEGORY
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="folder-form-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-amber-500 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-amber-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" id="folder-modal-header-icon" class="fa-solid fa-folder-plus text-lg text-amber-200"></i>
+                    <h3 id="folder-modal-title" class="font-pixel text-xs tracking-wider">NEW FOLDER</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-folder-modal-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="folder-form" class="p-4 space-y-3 font-mono text-xs">
+                <input type="hidden" id="folder-form-id" value="">
+                <input type="hidden" id="folder-form-parent-id" value="">
+
+                <div id="folder-parent-preview-box" class="hidden p-2 rounded bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 text-[11px] text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                    <i aria-hidden="true" class="fa-solid fa-turn-up rotate-90 text-amber-600 dark:text-amber-400"></i>
+                    <span>Subfolder didalam: <strong id="folder-parent-name-text">Root</strong></span>
+                </div>
+
+                <div>
+                    <label for="folder-form-name" class="block font-bold mb-1">Nama Folder <span class="text-rose-500">*</span></label>
+                    <input type="text" id="folder-form-name" required placeholder="Contoh: Projek Rahasia, Lore Bab 1..." class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-amber-400">
+                </div>
+
+                <div>
+                    <label for="folder-form-category" class="block font-bold mb-1">Kategori Folder (Opsional)</label>
+                    <select id="folder-form-category" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none focus:border-amber-400">
+                        <option value="">[SEMUA] Tanpa Kategori Tertentu (Bisa untuk Semua Scroll)</option>
+                        {#if data.categories?.length}
+                            {#each data.categories as category}
+                                <option value="{category.slug}">{(category.slug).toUpperCase()} - {category.name}</option>
+                            {/each}
+                        {/if}
+                    </select>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 mt-1">
+                        * Jika folder berkategori tertentu, hanya scroll dalam kategori tersebut (atau scroll tanpa kategori) yang bisa dimasukkan.
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label for="folder-form-color" class="block font-bold mb-1">Warna Folder</label>
+                        <select id="folder-form-color" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                            <option value="amber" selected>Amber Gold</option>
+                            <option value="cyan">Neon Cyan</option>
+                            <option value="blue">Arcade Blue</option>
+                            <option value="emerald">Emerald Glow</option>
+                            <option value="rose">Crimson Red</option>
+                            <option value="purple">Arcane Purple</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="folder-form-icon" class="block font-bold mb-1">Icon Folder</label>
+                        <select id="folder-form-icon" class="w-full p-2 bg-surface-alt border border-black/30 rounded text-xs focus:outline-none">
+                            <option value="fa-solid fa-folder">Folder Standar</option>
+                            <option value="fa-solid fa-folder-closed">Folder Rapat</option>
+                            <option value="fa-solid fa-box-archive">Arsip Box</option>
+                            <option value="fa-solid fa-book-bookmark">Grimoire Book</option>
+                            <option value="fa-solid fa-scroll">Ancient Scroll</option>
+                            <option value="fa-solid fa-shield-halved">Shield Vault</option>
+                            <option value="fa-solid fa-gem">Gem Matrix</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-black/10">
+                    <button type="button" id="cancel-folder-form-btn" class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 text-main px-3 py-1.5 rounded text-xs">
+                        BATAL
+                    </button>
+                    <button type="submit" id="save-folder-form-btn" class="arcade-btn bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded text-xs flex items-center gap-1.5 font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-check"></i> SIMPAN FOLDER
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="delete-folder-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-rose-600 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-rose-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-triangle-exclamation text-lg text-yellow-300"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">BANISH FOLDER</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-delete-folder-modal-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 space-y-3 font-mono text-xs">
+                <input type="hidden" id="delete-folder-target-id" value="">
+                <p class="text-main leading-relaxed">
+                    Apakah Anda yakin ingin memusnahkan folder <strong id="delete-folder-name-text" class="text-rose-600 dark:text-rose-400">...</strong>?
+                </p>
+                <div class="p-2.5 rounded bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-900 text-[11px] text-rose-800 dark:text-rose-200">
+                    <i aria-hidden="true" class="fa-solid fa-circle-info mr-1"></i> Subfolder didalamnya akan ikut terhapus. Gulungan catatan yang ada didalam folder ini tidak akan terhapus, melainkan otomatis dialihkan menjadi gulungan di Root Directory.
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-black/10">
+                    <button type="button" id="cancel-delete-folder-btn" class="arcade-btn bg-surface hover:bg-slate-200 dark:hover:bg-slate-800 text-main px-3 py-1.5 rounded text-xs">
+                        BATAL
+                    </button>
+                    <button type="button" id="confirm-delete-folder-btn" class="arcade-btn bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 rounded text-xs flex items-center gap-1.5 font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-trash-can"></i> BANISH FOLDER
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="markdown-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-4xl bg-[var(--bg-surface)] rounded-xl border-4 border-black dark:border-cyan-500 shadow-[8px_8px_0px_#000] flex flex-col max-h-[90vh] overflow-hidden">
+
+            <div class="p-3.5 bg-cyan-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-file-code text-lg"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">MARKDOWN EDITOR & LIVE PREVIEW</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-markdown-modal-btn" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-3 bg-[var(--bg-surface-alt)] border-b-2 border-black/10 dark:border-white/10 flex items-center justify-between flex-wrap gap-2 text-xs font-mono">
+                <div class="flex items-center gap-1.5">
+                    <button type="button" id="md-tab-split-btn" class="arcade-btn bg-cyan-600 text-white px-2.5 py-1 rounded text-xs font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-table-columns mr-1"></i> Split View
+                    </button>
+                    <button type="button" id="md-tab-editor-btn" class="arcade-btn bg-[var(--bg-surface)] px-2.5 py-1 rounded text-xs">
+                        <i aria-hidden="true" class="fa-solid fa-pen-to-square mr-1"></i> Editor Saja
+                    </button>
+                    <button type="button" id="md-tab-preview-btn" class="arcade-btn bg-[var(--bg-surface)] px-2.5 py-1 rounded text-xs">
+                        <i aria-hidden="true" class="fa-solid fa-eye mr-1"></i> Preview Saja
+                    </button>
+                </div>
+
+                <div class="flex items-center gap-3 text-[11px] text-slate-600 dark:text-slate-300">
+                    <span><strong id="md-modal-word-count">0</strong> kata</span>
+                    <span>&bull;</span>
+                    <span><strong id="md-modal-char-count">0</strong> karakter</span>
+                </div>
+            </div>
+
+            <div class="p-4 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono" id="md-modal-grid">
+
+                <div id="md-modal-editor-pane" class="flex flex-col space-y-1.5">
+                    <div class="flex items-center justify-between font-bold text-blue-900 dark:text-cyan-300">
+                        <label for="markdown-modal-textarea" class="flex items-center gap-1">
+                            <i aria-hidden="true" class="fa-brands fa-markdown text-base text-cyan-500"></i> Markdown Editor
+                        </label>
+                        <button type="button" id="md-insert-sample-btn" class="text-[10px] text-cyan-600 dark:text-cyan-400 underline hover:opacity-80">
+                            + Masukkan Contoh
+                        </button>
+                    </div>
+                    <textarea id="markdown-modal-textarea"
+                              rows="12"
+                              placeholder="# Judul Dokumen&#10;&#10;Tulis atau tempel teks Markdown (.md) Anda di sini...&#10;&#10;**Tebal**, *Miring*, dan `Kode inline`&#10;&#10;- [x] Tugas selesai&#10;- [ ] Rencana berikutnya&#10;&#10;| Kolom 1 | Kolom 2 |&#10;| --- | --- |&#10;| Data A | Data B |"
+                              class="w-full flex-1 p-3 bg-[var(--bg-main)] text-[var(--text-main)] border-2 border-black/30 dark:border-blue-700/60 rounded-lg focus:outline-none focus:border-cyan-500 text-xs font-mono leading-relaxed resize-y"></textarea>
+                </div>
+
+                <div id="md-modal-preview-pane" class="flex flex-col space-y-1.5">
+                    <div class="flex items-center justify-between font-bold text-blue-900 dark:text-cyan-300">
+                        <span class="flex items-center gap-1">
+                            <i aria-hidden="true" class="fa-solid fa-eye text-base text-purple-500"></i> Live Preview HTML
+                        </span>
+                        <span class="text-[10px] px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-500/30">
+                            Render Instan
+                        </span>
+                    </div>
+                    <div id="markdown-modal-preview"
+                         class="w-full flex-1 p-3 bg-[var(--bg-main)] text-[var(--text-main)] border-2 border-dashed border-purple-500/40 rounded-lg overflow-y-auto max-w-none text-xs leading-relaxed min-h-[220px]">
+                        <p class="text-slate-400 italic">Preview hasil terjemahan Markdown akan otomatis muncul di sini...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-3.5 border-t-2 border-black/10 dark:border-white/10 bg-[var(--bg-surface-alt)] flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+                <div class="flex items-center gap-3">
+                    <label for="profile-name-input" class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="md_apply_mode" value="cursor" checked class="text-cyan-600 focus:ring-0">
+                        <span>Sisipkan di Kursor</span>
+                    </label>
+                    <label class="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" name="md_apply_mode" value="replace" class="text-cyan-600 focus:ring-0">
+                        <span>Ganti Seluruh Catatan</span>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <button type="button" id="cancel-markdown-modal-btn" class="arcade-btn bg-[var(--bg-surface)] px-3 py-1.5 rounded text-xs font-mono">
+                        Batal
+                    </button>
+                    <button type="button" id="confirm-markdown-modal-btn" class="arcade-btn bg-cyan-600 hover:bg-cyan-500 text-white px-4 py-1.5 rounded text-xs font-mono font-bold">
+                        <i aria-hidden="true" class="fa-solid fa-check mr-1.5"></i> Terapkan ke Catatan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="clear-confirm-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 hidden">
+        <div class="arcade-card w-full max-w-md bg-[var(--bg-surface)] rounded-xl border-4 border-black dark:border-rose-600 shadow-[8px_8px_0px_#000] flex flex-col overflow-hidden">
+            <div class="p-3.5 bg-rose-600 text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-broom text-lg"></i>
+                    <h3 class="font-pixel text-xs tracking-wider">BERSIHKAN EDITOR</h3>
+                </div>
+                <button aria-label="Tutup panel" type="button" id="close-clear-modal-x" class="arcade-btn bg-black text-white px-2 py-0.5 rounded text-xs font-mono">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-5 space-y-4 font-mono text-xs">
+                <p class="text-[var(--text-main)] leading-relaxed font-bold">
+                    Pilih tindakan pembersihan untuk editor catatan aktif:
+                </p>
+                <div class="space-y-3">
+                    <button type="button" id="clear-formatting-only-btn" class="arcade-btn w-full p-3 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-950/60 dark:hover:bg-amber-900/80 text-amber-950 dark:text-amber-200 border-2 border-amber-600 text-left flex items-start gap-2.5">
+                        <i aria-hidden="true" class="fa-solid fa-wand-magic-sparkles text-base mt-0.5 text-amber-600 shrink-0"></i>
+                        <div>
+                            <div class="font-bold">1. Bersihkan Format Teks Saja</div>
+                            <div class="text-[11px] opacity-80 mt-0.5">Menghapus semua warna, ukuran, tebal/miring, dan tag heading menjadi teks polos tanpa menghapus isi tulisanmu.</div>
+                        </div>
+                    </button>
+
+                    <button type="button" id="clear-all-content-btn" class="arcade-btn w-full p-3 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950/60 dark:hover:bg-rose-900/80 text-rose-950 dark:text-rose-200 border-2 border-rose-600 text-left flex items-start gap-2.5">
+                        <i aria-hidden="true" class="fa-solid fa-trash-can text-base mt-0.5 text-rose-600 shrink-0"></i>
+                        <div>
+                            <div class="font-bold">2. Kosongkan Seluruh Isi Catatan</div>
+                            <div class="text-[11px] opacity-80 mt-0.5">Mengosongkan seluruh lembar kerja di editor aktif.</div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div class="p-3 border-t-2 border-black/10 dark:border-white/10 bg-[var(--bg-surface-alt)] flex justify-end">
+                <button type="button" id="cancel-clear-modal-btn" class="arcade-btn bg-[var(--bg-surface)] px-4 py-1.5 rounded text-xs font-mono font-bold">
+                    Batal
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="profile-settings-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 hidden">
+        <div class="arcade-card bg-[var(--bg-surface)] border-2 border-black dark:border-blue-700 w-full max-w-lg rounded-xl overflow-hidden shadow-[6px_6px_0px_#000] flex flex-col max-h-[90vh]">
+
+            <div class="p-3.5 bg-blue-600 dark:bg-blue-900 border-b-2 border-black text-white flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <i aria-hidden="true" class="fa-solid fa-user-shield text-base text-yellow-300"></i>
+                    <h2 class="font-pixel text-xs sm:text-sm tracking-wider uppercase">HERO GUILD IDENTITY & SECURITY</h2>
+                </div>
+                <button type="button" id="close-profile-modal-x" class="arcade-btn bg-black text-white hover:bg-gray-800 px-2 py-0.5 rounded text-xs font-mono" title="Tutup (ESC)">
+                    <i aria-hidden="true" class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs font-mono">
+
+                <div class="arcade-card p-3 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950/40 shadow-[2px_2px_0px_#000] flex items-center gap-3">
+                    <div class="w-12 h-12 rounded border-2 border-black bg-blue-600 flex items-center justify-center text-white shrink-0 shadow-[2px_2px_0px_#000]">
+                        <i aria-hidden="true" class="fa-solid fa-hat-wizard text-xl"></i>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-pixel text-xs text-blue-900 dark:text-cyan-300 font-bold" id="profile-modal-rank-title">{stats['rank_title'] ?? 'Novice Scribe'}</span>
+                            <span class="font-pixel text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded border border-black" id="profile-modal-level">LV.{stats['level'] ?? 1}</span>
+                        </div>
+                        <div class="flex items-center justify-between mt-1 text-[11px] text-slate-700 dark:text-gray-300">
+                            <span><i aria-hidden="true" class="fa-solid fa-scroll mr-1 text-blue-600 dark:text-cyan-400"></i>{stats['total_notes'] ?? 0} Catatan</span>
+                            <span><i aria-hidden="true" class="fa-solid fa-feather-pointed mr-1 text-purple-600 dark:text-purple-400"></i>{stats['total_words'] ?? 0} Kata</span>
+                            <span class="text-amber-600 dark:text-yellow-400 font-bold">{stats['total_xp'] ?? 10} XP</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="profile-settings-form" class="space-y-3.5">
+
+                    <div>
+                        <label for="profile-name-input" class="block font-bold mb-1 text-slate-800 dark:text-gray-200">
+                            <i aria-hidden="true" class="fa-solid fa-user mr-1 text-blue-600 dark:text-cyan-400"></i> Nama Adventurer:
+                        </label>
+                        <input type="text"
+                               id="profile-name-input"
+                               name="name"
+                               value="{data.user?.name ?? ''}"
+                               required
+                               maxlength="255"
+                               class="retro-input w-full p-2.5 rounded bg-[var(--bg-main)] border-2 border-black dark:border-blue-700 font-mono text-xs focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div>
+                        <label for="profile-email-input" class="block font-bold mb-1 text-slate-800 dark:text-gray-200">
+                            <i aria-hidden="true" class="fa-solid fa-envelope mr-1 text-blue-600 dark:text-cyan-400"></i> Email Arcane:
+                        </label>
+                        <input type="email"
+                               id="profile-email-input"
+                               name="email"
+                               value="{data.user?.email ?? ''}"
+                               required
+                               maxlength="255"
+                               class="retro-input w-full p-2.5 rounded bg-[var(--bg-main)] border-2 border-black dark:border-blue-700 font-mono text-xs focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="pt-2 border-t-2 border-dashed border-black/20 dark:border-blue-900/40">
+                        <span class="font-bold text-[11px] text-blue-700 dark:text-cyan-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <i aria-hidden="true" class="fa-solid fa-key"></i> Ubah Password Kredensial (Opsional)
+                        </span>
+                        <p class="text-[10px] opacity-70 mt-0.5">Biarkan kosong jika tidak ingin mengubah password akun.</p>
+                    </div>
+
+                    <div>
+                        <label for="profile-current-password-input" class="block font-bold mb-1 text-slate-800 dark:text-gray-200">
+                            Password Saat Ini:
+                        </label>
+                        <div class="relative">
+                            <input type="password"
+                                   id="profile-current-password-input"
+                                   name="current_password"
+                                   placeholder="Masukkan password saat ini..."
+                                   class="retro-input w-full p-2.5 pr-9 rounded bg-[var(--bg-main)] border-2 border-black dark:border-blue-700 font-mono text-xs">
+                            <button type="button" class="toggle-password-btn password-toggle-btn absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer" data-target="profile-current-password-input" title="Tampilkan kata sandi">
+                                <i aria-hidden="true" class="fa-solid fa-eye text-xs"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label for="profile-new-password-input" class="block font-bold mb-1 text-slate-800 dark:text-gray-200">
+                                Password Baru:
+                            </label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="profile-new-password-input"
+                                       name="password"
+                                       placeholder="Minimal 8 karakter..."
+                                       class="retro-input w-full p-2.5 pr-9 rounded bg-[var(--bg-main)] border-2 border-black dark:border-blue-700 font-mono text-xs">
+                                <button type="button" class="toggle-password-btn password-toggle-btn absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer" data-target="profile-new-password-input" title="Tampilkan kata sandi">
+                                    <i aria-hidden="true" class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="profile-confirm-password-input" class="block font-bold mb-1 text-slate-800 dark:text-gray-200">
+                                Konfirmasi Password:
+                            </label>
+                            <div class="relative">
+                                <input type="password"
+                                       id="profile-confirm-password-input"
+                                       name="password_confirmation"
+                                       placeholder="Ulangi password..."
+                                       class="retro-input w-full p-2.5 pr-9 rounded bg-[var(--bg-main)] border-2 border-black dark:border-blue-700 font-mono text-xs">
+                                <button type="button" class="toggle-password-btn password-toggle-btn absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 cursor-pointer" data-target="profile-confirm-password-input" title="Tampilkan konfirmasi kata sandi">
+                                    <i aria-hidden="true" class="fa-solid fa-eye text-xs"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="profile-form-error" class="hidden p-2.5 rounded bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-200 border-2 border-rose-500 text-[11px]"></div>
+                </form>
+            </div>
+
+            <div class="p-3 border-t-2 border-black/10 dark:border-white/10 bg-[var(--bg-surface-alt)] flex items-center justify-between gap-2">
+                <button type="button" id="close-profile-modal-btn" class="arcade-btn bg-[var(--bg-surface)] hover:bg-gray-200 dark:hover:bg-slate-800 px-4 py-2 rounded text-xs font-mono font-bold shadow-[2px_2px_0px_#000]">
+                    Batal
+                </button>
+                <button type="button" id="save-profile-btn" class="arcade-btn bg-blue-600 hover:bg-blue-500 text-white px-5 py-2 rounded text-xs font-mono font-bold tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_#000]">
+                    <i aria-hidden="true" class="fa-solid fa-floppy-disk"></i> SIMPAN PERUBAHAN
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <input type="hidden" id="initial-active-note-id" value="{activeNote?.id ?? ''}">
+
+</div>

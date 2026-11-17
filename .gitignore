@@ -7,6 +7,9 @@ node_modules
 .wrangler
 /.svelte-kit
 /build
+/test-results
+/playwright-report
+/static/landing.min.js
 
 # OS
 .DS_Store
