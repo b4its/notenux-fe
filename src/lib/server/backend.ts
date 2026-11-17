@@ -51,7 +51,11 @@ export async function upstream(event: RequestEvent, path: string, init: RequestI
 			...init,
 			headers,
 			redirect: 'manual',
-			signal: AbortSignal.timeout(15_000)
+			signal: AbortSignal.any([
+				event.request.signal,
+				AbortSignal.timeout(15_000),
+				...(init.signal ? [init.signal] : [])
+			])
 		});
 		storeCookies(event, response);
 		if (response.status === 419) event.cookies.delete('notenux_csrf', { path: '/' });

@@ -5567,21 +5567,36 @@ class NotenuxPanel {
     }
 
     async selectNote(note) {
+        // A summary for the current note must not download an older server copy
+        // concurrently with saving the local manuscript.
+        if (note.id === this.activeNote?.id && this.activeNote.content != null) note = this.activeNote;
         const version = ++this.selectionVersion;
         this.noteLoadController?.abort();
         this.dom.editorArea?.setAttribute?.('aria-busy', 'true');
+        let controller = null;
+        let pendingLoad = null;
         try {
+            if (note.content === undefined || note.content === null) {
+                controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                this.noteLoadController = controller;
+                // Download a different manuscript while flushing the current one,
+                // but never replace the editor until that save has succeeded.
+                // Settle rejection immediately, including when the save fails first.
+                pendingLoad = Promise.resolve()
+                    .then(() => fetch(`/api/notes/${note.id}`, controller ? { signal: controller.signal } : {}))
+                    .then(response => ({ response }), error => ({ error }));
+            }
             if (!await this.flushNote()) return;
             if (version !== this.selectionVersion) return;
             this.audio.playBlip();
 
-            if (note.content === undefined || note.content === null) {
+            if (pendingLoad) {
                 try {
-                    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-                    this.noteLoadController = controller;
-                    const response = await fetch(`/api/notes/${note.id}`, controller ? { signal: controller.signal } : {});
+                    const result = await pendingLoad;
                     // Do not parse a large, stale response after the user has moved on.
                     if (version !== this.selectionVersion) return;
+                    if (result.error) throw result.error;
+                    const response = result.response;
                     const data = await response.json();
                     if (response.ok && data.data) {
                         if (version !== this.selectionVersion) return;
@@ -5607,6 +5622,8 @@ class NotenuxPanel {
             this.loadNoteIntoEditor(note);
             if (window.innerWidth < 1024) this.closeMobileDrawers();
         } finally {
+            // Also cancel the speculative download if saving or navigation failed.
+            controller?.abort();
             if (version === this.selectionVersion) {
                 this.noteLoadController = null;
                 this.dom.editorArea?.setAttribute?.('aria-busy', 'false');

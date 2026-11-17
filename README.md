@@ -39,4 +39,6 @@ Landing dirender server tanpa hydration/router; interaksinya satu bundle kecil. 
 
 Studio memuat ringkasan lebih dahulu dan mengambil naskah aktif setelah shell tampil. Perpindahan catatan tidak membuat salinan Markdown/teks polos yang tersembunyi; konversi dilakukan hanya saat mode tersebut aktif. Sanitasi memasukkan fragment DOM langsung, dan statistik tersimpan dipakai tanpa memaksa layout ulang seluruh naskah.
 
+Saat berpindah dari catatan yang sedang diubah, pengunduhan catatan tujuan berjalan bersamaan dengan penyimpanan catatan lama. Editor baru hanya ditampilkan setelah penyimpanan berhasil; kegagalan tetap mempertahankan draft lama. Permintaan yang dibatalkan juga membatalkan fetch ke backend.
+
 `scripts/migrate.mjs /path/to/laravel-notenux` adalah alat migrasi satu kali, bukan bagian build. Menjalankannya ulang menimpa halaman hasil konversi, runtime editor, CSS, aset logo, dan tes editor. `scripts/optimize-assets.mjs` mengoptimalkan logo setelah migrasi; `scripts/vendor-assets.mjs` memperbarui font/ikon beserta lisensinya.

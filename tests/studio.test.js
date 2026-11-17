@@ -207,6 +207,72 @@ test('performance: initial Studio summaries do not become empty cached manuscrip
     assert.equal(panel.dom.noteTitleInput.readOnly, true);
 });
 
+test('performance: downloading the next note overlaps saving without replacing unsaved content', async () => {
+    const saving = deferred();
+    const loading = deferred();
+    const calls = [];
+    let parsed = false;
+    const { panel } = harness((url, options) => {
+        calls.push({ url, method: options.method || 'GET' });
+        return options.method === 'PUT' ? saving.promise : loading.promise;
+    });
+    panel.notes.push({ id: 2 });
+    const switching = panel.selectNote(panel.notes[1]);
+    await Promise.resolve();
+    await Promise.resolve();
+    assert.equal(calls.some(call => call.method === 'GET'), true);
+    assert.equal(calls.some(call => call.method === 'PUT'), true);
+    loading.resolve({ ok: true, json: async () => { parsed = true; return { data: { id: 2, content: 'Next manuscript' } }; } });
+    await Promise.resolve();
+    assert.equal(panel.activeNote.id, 1);
+    assert.equal(parsed, false, 'parsing must not block input while the old note is being saved');
+    saving.resolve(response({ id: 1, title: 'Alpha', content: 'First draft' }));
+    await switching;
+    assert.equal(parsed, true);
+    assert.equal(panel.activeNote.id, 2);
+    assert.equal(panel.dirtyNotes.has(1), false);
+});
+
+test('regression: failed saves abort speculative downloads and retain the original draft', async () => {
+    const loading = deferred();
+    let signal, parsed = false;
+    const { panel, context } = harness((url, options) => {
+        if (options.method === 'PUT') return Promise.resolve({ ok: false, json: async () => ({ message: 'Offline' }) });
+        signal = options.signal;
+        return loading.promise;
+    });
+    context.AbortController = AbortController;
+    panel.notes.push({ id: 2 });
+    await panel.selectNote(panel.notes[1]);
+    assert.equal(signal.aborted, true);
+    assert.equal(panel.activeNote.id, 1);
+    assert.equal(panel.activeNote.content, 'First draft');
+    assert.equal(panel.dirtyNotes.has(1), true);
+    loading.resolve({ ok: true, json: async () => { parsed = true; return { data: { id: 2 } }; } });
+    await Promise.resolve();
+    assert.equal(parsed, false);
+});
+
+test('regression: a rejected speculative download remains handled when the save also fails', async () => {
+    const { panel } = harness(async () => { throw new Error('Offline'); });
+    await panel.selectNote({ id: 2 });
+    assert.equal(panel.activeNote.id, 1);
+    assert.equal(panel.dirtyNotes.has(1), true);
+    assert.equal(panel.loaded, undefined);
+});
+
+test('regression: selecting a summary of the current note uses its local content, not a stale download', async () => {
+    const methods = [];
+    const { panel } = harness(async (url, options) => {
+        methods.push(options.method);
+        return response({ id: 1, ...JSON.parse(options.body) });
+    });
+    panel.activeNote.content = 'Latest local manuscript';
+    await panel.selectNote({ id: 1 });
+    assert.deepEqual(methods, ['PUT']);
+    assert.equal(panel.loaded.content, 'Latest local manuscript');
+});
+
 test('white-box: late save response never changes another active manuscript', async () => {
     const pending = deferred();
     const { panel } = harness(() => pending.promise);

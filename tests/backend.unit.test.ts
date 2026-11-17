@@ -19,6 +19,18 @@ function event(path = '/api/notes', method = 'GET', origin = 'http://localhost')
 }
 afterEach(() => vi.unstubAllGlobals());
 describe('backend trust boundary', () => {
+	it('cancels upstream work when the client disconnects', async () => {
+		const request = event();
+		const controller = new AbortController();
+		request.request = new Request(request.url, { signal: controller.signal });
+		const fetch = vi.fn().mockResolvedValue(Response.json({ data: [] }));
+		vi.stubGlobal('fetch', fetch);
+		await upstream(request, '/api/notes');
+		const signal = fetch.mock.calls[0][1].signal as AbortSignal;
+		expect(signal.aborted).toBe(false);
+		controller.abort();
+		expect(signal.aborted).toBe(true);
+	});
 	it.each(['/api/notes', '/api/notes/1', '/api/notes/1/chunks/verify', '/api/notes/1/chunks/2', '/api/notes/1/export/md', '/api/notes/bulk-delete', '/api/categories/1', '/api/folders', '/profile', '/logout'])('allows %s', (path) => expect(isProxyPath(path)).toBe(true));
 	it.each(['/api/unknown', '//evil.test', '/api/notes/../../admin', '/api/notes/%2fadmin', '/api/notes/1/unknown', '/api/profile/1', '/api/notes/1/export/../../x'])('rejects %s', (path) => expect(isProxyPath(path)).toBe(false));
 	it('uses the configured backend origin', () => expect(backendUrl('/api/notes').href).toBe('https://notenux.oryphem.com/api/notes'));
