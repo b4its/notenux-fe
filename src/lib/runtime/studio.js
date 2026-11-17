@@ -11,7 +11,7 @@ const fetch = (url, options = {}) => window.fetch(url, {
     },
 });
 
-function sanitizeHtml(html) {
+function sanitizeHtml(html, asFragment = false) {
     if (typeof html !== 'string') return '';
     const cleanRaw = html.replace(/<!--[\s\S]*?-->/g, '');
     const template = document.createElement('template');
@@ -61,7 +61,7 @@ function sanitizeHtml(html) {
         }
         if (element.localName === 'input' && element.type !== 'checkbox') element.remove();
     }
-    return template.innerHTML;
+    return asFragment ? template.content : template.innerHTML;
 }
 
 class RetroAudio {
@@ -1960,7 +1960,7 @@ class NotenuxPanel {
             }
             parent.removeChild(m);
         });
-        this.dom.editorArea.normalize?.();
+        if (marks.length) this.dom.editorArea.normalize?.();
         this.findMatches = [];
         this.currentMatchIndex = -1;
         if (this.dom.findMatchBadge) this.dom.findMatchBadge.textContent = '0 matches';
@@ -2404,12 +2404,18 @@ class NotenuxPanel {
         const activeId = activeIdEl ? parseInt(activeIdEl.value, 10) : null;
 
         if (this.notes.length > 0) {
-            this.activeNote = this.notes.find(n => n.id === activeId) || this.notes[0];
-            if (this.dom.editorArea && (!this.activeNote.content || this.activeNote.content === '')) {
-                this.activeNote.content = this.dom.editorArea.innerHTML;
+            const note = this.notes.find(n => n.id === activeId) || this.notes[0];
+            if (note.content === undefined || note.content === null) {
+                // Paint the Studio shell before fetching a potentially large manuscript.
+                this.dom.editorArea?.setAttribute?.('contenteditable', 'false');
+                if (this.dom.noteTitleInput) this.dom.noteTitleInput.readOnly = true;
+                this.renderNotesList();
+                this.selectNote(note);
+            } else {
+                this.activeNote = note;
+                this.renderNotesList();
+                this.loadNoteIntoEditor(note);
             }
-            this.renderNotesList();
-            this.loadNoteIntoEditor(this.activeNote);
         } else {
             this.clearEditorToEmptyState();
         }
@@ -4931,7 +4937,7 @@ class NotenuxPanel {
         this.dom.editorArea.focus?.();
     }
 
-    updateWordAndCharMetrics() {
+    updateWordAndCharMetrics(metrics = null) {
         if (!this.activeNote) {
             if (this.dom.wordCountBadge) this.dom.wordCountBadge.innerHTML = '<i class="fa-solid fa-pen-nib mr-1 text-blue-500"></i> 0 Words';
             if (this.dom.charCountBadge) this.dom.charCountBadge.innerHTML = '<i class="fa-solid fa-font mr-1 text-blue-500"></i> 0 Chars';
@@ -4940,9 +4946,16 @@ class NotenuxPanel {
             return;
         }
 
-        const text = this.dom.editorArea?.innerText || '';
-        const words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
-        const chars = text.length;
+        // Opening a saved note already has counts from the backend. Reading innerText
+        // here would synchronously lay out the entire newly inserted manuscript.
+        let words, chars;
+        if (metrics) {
+            ({ words, chars } = metrics);
+        } else {
+            const text = this.dom.editorArea?.innerText || '';
+            words = text.trim() === '' ? 0 : text.trim().split(/\s+/).length;
+            chars = text.length;
+        }
         const minutes = Math.max(1, Math.ceil(words / 180));
 
         if (this.dom.wordCountBadge) this.dom.wordCountBadge.innerHTML = `<i class="fa-solid fa-pen-nib mr-1 text-blue-500"></i> ${words} Words`;
@@ -5555,38 +5568,49 @@ class NotenuxPanel {
 
     async selectNote(note) {
         const version = ++this.selectionVersion;
-        if (!await this.flushNote()) return;
-        if (version !== this.selectionVersion) return;
-        this.audio.playBlip();
+        this.noteLoadController?.abort();
+        this.dom.editorArea?.setAttribute?.('aria-busy', 'true');
+        try {
+            if (!await this.flushNote()) return;
+            if (version !== this.selectionVersion) return;
+            this.audio.playBlip();
 
-        // If content is not yet in memory (due to optimized lightweight list queries), fetch on demand
-        if (note.content === undefined || note.content === null) {
-            try {
-                const response = await fetch(`/api/notes/${note.id}`);
-                const data = await response.json();
-                if (response.ok && data.data) {
+            if (note.content === undefined || note.content === null) {
+                try {
+                    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+                    this.noteLoadController = controller;
+                    const response = await fetch(`/api/notes/${note.id}`, controller ? { signal: controller.signal } : {});
+                    // Do not parse a large, stale response after the user has moved on.
                     if (version !== this.selectionVersion) return;
-                    note = data.data;
-                    const idx = this.notes.findIndex(n => n.id === note.id);
-                    if (idx !== -1) {
-                        this.notes[idx] = data.data;
+                    const data = await response.json();
+                    if (response.ok && data.data) {
+                        if (version !== this.selectionVersion) return;
+                        note = data.data;
+                        const idx = this.notes.findIndex(n => n.id === note.id);
+                        if (idx !== -1) this.notes[idx] = note;
+                    } else {
+                        throw new Error('Load failed');
                     }
-                } else {
-                    throw new Error('Load failed');
+                } catch (e) {
+                    if (version !== this.selectionVersion || e.name === 'AbortError') return;
+                    this.toast.show('Tidak dapat memuat naskah. Coba lagi.', 'danger');
+                    return;
                 }
-            } catch (e) {
-                this.toast.show('Tidak dapat memuat naskah. Coba lagi.', 'danger');
-                return;
             }
-        }
 
-        if (version !== this.selectionVersion) return;
-        this.activeNote = note;
-        this.closeChunkInspector();
-        this.renderNotesList();
-        this.loadNoteIntoEditor(note);
-        if (window.innerWidth < 1024) {
-            this.closeMobileDrawers();
+            // Typing may have continued in the old note during the network request.
+            if (!await this.flushNote()) return;
+            if (version !== this.selectionVersion) return;
+            this.activeNote = note;
+            this.closeChunkInspector();
+            this.renderNotesList();
+            this.loadNoteIntoEditor(note);
+            if (window.innerWidth < 1024) this.closeMobileDrawers();
+        } finally {
+            if (version === this.selectionVersion) {
+                this.noteLoadController = null;
+                this.dom.editorArea?.setAttribute?.('aria-busy', 'false');
+            }
         }
     }
 
@@ -5643,11 +5667,14 @@ class NotenuxPanel {
 
     loadNoteIntoEditor(note) {
         if (!note) return;
+        clearTimeout(this.historyDebounce);
         this.clearFindHighlights();
+        let recoveredDraft = false;
         try {
             const draft = JSON.parse(localStorage.getItem(`notenux_draft_${note.id}`) || 'null');
             if (draft && draft.timestamp > new Date(note.updated_at || 0).getTime()) {
                 Object.assign(note, { title: draft.title, content: draft.content });
+                recoveredDraft = true;
                 this.dirtyNotes.add(note.id);
                 this.toast.show('Draft lokal dipulihkan. Simpan untuk sinkronisasi.', 'warning');
             }
@@ -5667,24 +5694,40 @@ class NotenuxPanel {
             this.dom.noteFolderSelect.value = note.folder_id ? String(note.folder_id) : '';
         }
 
+        let editorHtml = note.content || '';
         if (this.dom.editorArea) {
             this.dom.editorArea.setAttribute?.('contenteditable', 'true');
-            this.dom.editorArea.innerHTML = sanitizeHtml(note.content || '');
-            this.initHistory(this.dom.editorArea.innerHTML);
+            if (typeof this.dom.editorArea.replaceChildren === 'function') {
+                this.dom.editorArea.replaceChildren(sanitizeHtml(editorHtml, true));
+            } else {
+                this.dom.editorArea.innerHTML = sanitizeHtml(editorHtml);
+            }
+            editorHtml = this.dom.editorArea.innerHTML;
+            this.initHistory(editorHtml);
         }
 
         if (this.dom.markdownRawEditor) {
-            this.dom.markdownRawEditor.value = MarkdownEngine.toMarkdown(note.content || '');
-            this.rawViewOriginalMarkdown = this.dom.markdownRawEditor.value;
-            this.rawViewOriginalHtml = this.dom.editorArea.innerHTML;
+            this.dom.markdownRawEditor.value = '';
+            this.rawViewOriginalMarkdown = '';
+            this.rawViewOriginalHtml = '';
+            if (this.isRawMarkdownMode) {
+                this.dom.markdownRawEditor.value = MarkdownEngine.toMarkdown(editorHtml);
+                this.rawViewOriginalMarkdown = this.dom.markdownRawEditor.value;
+                this.rawViewOriginalHtml = editorHtml;
+            }
         }
 
         if (this.dom.plainTextEditor) {
-            const plain = this.htmlToPlainText(note.content || '');
-            this.dom.plainTextEditor.value = plain;
-            this.plainTextOriginalText = plain;
-            this.plainTextOriginalHtml = this.dom.editorArea ? this.dom.editorArea.innerHTML : (note.content || '');
-            this.updatePlainTextStats();
+            this.dom.plainTextEditor.value = '';
+            this.plainTextOriginalText = '';
+            this.plainTextOriginalHtml = '';
+            if (this.isPlainTextMode) {
+                const plain = this.htmlToPlainText(editorHtml);
+                this.dom.plainTextEditor.value = plain;
+                this.plainTextOriginalText = plain;
+                this.plainTextOriginalHtml = editorHtml;
+                this.updatePlainTextStats();
+            }
         }
 
         const font = note.font_family || 'sans';
@@ -5697,7 +5740,8 @@ class NotenuxPanel {
 
         this.applyFontFamily(font);
         this.applyFontSize(size);
-        this.updateWordAndCharMetrics();
+        this.updateWordAndCharMetrics(!recoveredDraft && Number.isFinite(note.word_count) && Number.isFinite(note.char_count)
+            ? { words: note.word_count, chars: note.char_count } : null);
         this.updatePinButtonUI();
         this.updateFavoriteButtonUI();
 

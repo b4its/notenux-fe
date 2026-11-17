@@ -10,6 +10,10 @@ function reset() {
 	notes = [{ id: 1, title: 'Catatan pertama', content: '<p>Halo dari backend uji.</p>', category: 'catatan', folder_id: null, font_family: 'sans', font_size: '16px', theme_color: 'blue', is_pinned: false, is_favorite: false, level: 1, xp: 10, word_count: 5, char_count: 22, chunks_count: 1, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }];
 }
 reset();
+function counts(content = '') {
+	const text = content.replace(/<[^>]*>/g, ' ').trim();
+	return { word_count: text ? text.split(/\s+/).length : 0, char_count: text.length };
+}
 http.createServer(async (request, response) => {
 	const url = new URL(request.url, 'http://localhost');
 	const path = url.pathname;
@@ -52,7 +56,7 @@ http.createServer(async (request, response) => {
 		return success(notes.filter((note) => !url.searchParams.get('q') || note.title.toLowerCase().includes(url.searchParams.get('q').toLowerCase())).map(({ content, ...note }) => note));
 	}
 	if (path === '/api/notes' && request.method === 'POST') {
-		const note = { ...notes[0], ...body, id: ++sequence, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+		const note = { ...notes[0], ...body, ...counts(body.content), id: ++sequence, created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
 		notes.push(note); return success(note);
 	}
 	const noteRoute = path.match(/^\/api\/notes\/(\d+)(?:\/(.+))?$/);
@@ -69,7 +73,7 @@ http.createServer(async (request, response) => {
 		if (action === 'pin') note.is_pinned = !note.is_pinned;
 		if (action === 'favorite') note.is_favorite = !note.is_favorite;
 		if (action === 'duplicate') { const clone = { ...note, id: ++sequence, title: `${note.title} (Copy)` }; notes.push(clone); return success(clone); }
-		if (request.method === 'PUT') Object.assign(note, body);
+		if (request.method === 'PUT') Object.assign(note, body, body.content === undefined ? {} : counts(body.content));
 		if (request.method === 'DELETE') notes = notes.filter((item) => item.id !== note.id);
 		return success(note);
 	}

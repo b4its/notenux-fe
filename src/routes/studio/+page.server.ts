@@ -8,6 +8,7 @@ export const load: import('./$types').PageServerLoad = async (event) => {
 		jsonData(event, '/api/notes'), jsonData(event, '/api/categories'),
 		jsonData(event, '/api/folders'), jsonData(event, '/api/player-stats')
 	]);
-	if (notes.length) notes[0] = await jsonData(event, `/api/notes/${notes[0].id}`);
+	// Only send lightweight summaries with the shell. The active manuscript is
+	// fetched once in the browser instead of blocking SSR and duplicating it in HTML.
 	return { notes, categories, folders, stats };
 };

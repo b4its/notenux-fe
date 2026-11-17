@@ -20,6 +20,6 @@ export default defineConfig({
 	],
 	webServer: [
 		{ command: 'node tests/mock-backend.mjs', url: 'http://127.0.0.1:4174/health' },
-		{ command: 'node --env-file=.env build', url: 'http://127.0.0.1:4173', env: { API_BASE_URL: 'http://127.0.0.1:4174', PORT: '4173', ORIGIN: 'http://127.0.0.1:4173' } }
+		{ command: 'node --env-file=.env build', url: 'http://127.0.0.1:4173', env: { API_BASE_URL: 'http://127.0.0.1:4174', PORT: '4173', ORIGIN: 'http://127.0.0.1:4173', BODY_SIZE_LIMIT: '6M' } }
 	]
 });

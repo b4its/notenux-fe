@@ -38,6 +38,175 @@ const deferred = () => {
     return { promise, resolve };
 };
 
+function manuscriptHarness({ raw = false, plain = false } = {}) {
+    const state = harness(() => Promise.resolve(response({})));
+    const calls = { markdown: [], plain: [], metrics: [], history: [] };
+    state.context.markdownCalls = calls.markdown;
+    vm.runInContext(`
+        sanitizeHtml = html => html;
+        MarkdownEngine.toMarkdown = html => {
+            markdownCalls.push(html);
+            return 'markdown:' + html;
+        };
+    `, state.context);
+    Object.assign(state.panel, {
+        isRawMarkdownMode: raw,
+        isPlainTextMode: plain,
+        clearFindHighlights() {},
+        initHistory(html) { calls.history.push(html); },
+        htmlToPlainText(html) { calls.plain.push(html); return 'plain:' + html; },
+        updateWordAndCharMetrics(metrics) { calls.metrics.push(metrics); },
+        updatePlainTextStats() {},
+        applyFontFamily() {},
+        applyFontSize() {},
+    });
+    state.panel.dom.editorArea = { innerHTML: '', setAttribute() {} };
+    state.panel.dom.markdownRawEditor = { value: 'previous markdown' };
+    state.panel.dom.plainTextEditor = { value: 'previous text' };
+    // Use the actual loader rather than the existing persistence harness stub.
+    state.panel.loadNoteIntoEditor = state.context.Panel.prototype.loadNoteIntoEditor;
+    return { ...state, calls };
+}
+
+test('performance: rich note loading never converts hidden Markdown and plain-text views', () => {
+    const { panel, calls } = manuscriptHarness();
+    const note = { id: 2, title: 'Long', content: '<p>Complete manuscript</p>', word_count: 2, char_count: 19 };
+    panel.loadNoteIntoEditor(note);
+    assert.equal(calls.markdown.length, 0);
+    assert.equal(calls.plain.length, 0);
+    assert.equal(panel.dom.markdownRawEditor.value, '');
+    assert.equal(panel.dom.plainTextEditor.value, '');
+    assert.equal(calls.history[0], note.content);
+    assert.equal(calls.metrics[0].words, 2);
+    assert.equal(calls.metrics[0].chars, 19);
+});
+
+test('performance: switching notes in Markdown mode only prepares the visible Markdown view', () => {
+    const { panel, calls } = manuscriptHarness({ raw: true });
+    panel.loadNoteIntoEditor({ id: 2, content: '<p>Markdown</p>' });
+    assert.deepEqual(calls.markdown, ['<p>Markdown</p>']);
+    assert.equal(calls.plain.length, 0);
+    assert.equal(panel.dom.markdownRawEditor.value, 'markdown:<p>Markdown</p>');
+    assert.equal(panel.rawViewOriginalHtml, '<p>Markdown</p>');
+    assert.equal(panel.dom.plainTextEditor.value, '');
+});
+
+test('performance: switching notes in text mode only prepares the visible plain-text view', () => {
+    const { panel, calls } = manuscriptHarness({ plain: true });
+    panel.loadNoteIntoEditor({ id: 2, content: '<p>Plain</p>' });
+    assert.deepEqual(calls.plain, ['<p>Plain</p>']);
+    assert.equal(calls.markdown.length, 0);
+    assert.equal(panel.dom.plainTextEditor.value, 'plain:<p>Plain</p>');
+    assert.equal(panel.plainTextOriginalHtml, '<p>Plain</p>');
+    assert.equal(panel.dom.markdownRawEditor.value, '');
+});
+
+test('performance: restored local drafts recalculate counts rather than using stale server metadata', () => {
+    const { panel, context, calls } = manuscriptHarness();
+    context.localStorage.getItem = () => JSON.stringify({ title: 'Recovered', content: '<p>New draft text</p>', timestamp: Date.now() });
+    const note = { id: 2, content: '<p>Old</p>', updated_at: '2020-01-01', word_count: 1, char_count: 3 };
+    panel.loadNoteIntoEditor(note);
+    assert.equal(panel.dom.editorArea.innerHTML, '<p>New draft text</p>');
+    assert.equal(calls.metrics[0], null);
+    assert.equal(panel.dirtyNotes.has(2), true);
+});
+
+test('performance: loader adopts the sanitized fragment without serializing and parsing it again', () => {
+    const { panel, context, calls } = manuscriptHarness();
+    const fragment = { sanitized: true };
+    context.fragment = fragment;
+    vm.runInContext('sanitizeHtml = (html, asFragment) => { if (!asFragment) throw Error("second HTML parse"); return fragment; };', context);
+    let inserted;
+    panel.dom.editorArea = {
+        setAttribute() {},
+        replaceChildren(value) { inserted = value; },
+        get innerHTML() { return '<p>Sanitized</p>'; }
+    };
+    panel.loadNoteIntoEditor({ id: 2, content: '<p onclick="unsafe()">Sanitized</p>' });
+    assert.equal(inserted, fragment);
+    assert.equal(calls.history[0], '<p>Sanitized</p>');
+});
+
+test('performance: saved note counts do not force an editor layout through innerText', () => {
+    const { panel } = harness();
+    panel.wordGoal = 250;
+    panel.dom.editorArea = { get innerText() { throw new Error('forced layout'); } };
+    panel.updateWordAndCharMetrics({ words: 100, chars: 600 });
+    assert.equal(panel.activeNote.word_count, 100);
+    assert.equal(panel.activeNote.char_count, 600);
+});
+
+test('performance: clearing an inactive search never normalizes the entire manuscript DOM', () => {
+    const { panel } = harness();
+    panel.dom.editorArea = {
+        querySelectorAll: () => [],
+        normalize() { throw new Error('unnecessary full-document normalization'); }
+    };
+    panel.clearFindHighlights();
+    assert.equal(panel.findMatches.length, 0);
+});
+
+test('performance: obsolete note requests are aborted and their large JSON bodies are not parsed', async () => {
+    const first = deferred();
+    const second = deferred();
+    const requests = [];
+    const { panel, context, messages } = harness((url, options) => {
+        requests.push(options);
+        return requests.length === 1 ? first.promise : second.promise;
+    });
+    context.AbortController = AbortController;
+    panel.dirtyNotes.clear();
+    panel.notes.push({ id: 2 }, { id: 3 });
+    const older = panel.selectNote(panel.notes[1]);
+    await Promise.resolve();
+    const newer = panel.selectNote(panel.notes[2]);
+    await Promise.resolve();
+    assert.equal(requests[0].signal.aborted, true);
+    first.resolve({ ok: true, json() { throw new Error('stale response must not be parsed'); } });
+    second.resolve(response({ id: 3, content: '<p>Latest</p>' }));
+    await Promise.all([older, newer]);
+    assert.equal(panel.activeNote.id, 3);
+    assert.equal(panel.loaded.id, 3);
+    assert.equal(messages.length, 0);
+});
+
+test('regression: typing during a slow note download is saved before replacing the old editor', async () => {
+    const loading = deferred();
+    const saved = [];
+    const { panel } = harness((url, options) => {
+        if (url.endsWith('/2')) return loading.promise;
+        const snapshot = JSON.parse(options.body);
+        saved.push(snapshot);
+        return Promise.resolve(response({ id: 1, ...snapshot }));
+    });
+    panel.dirtyNotes.clear();
+    panel.notes.push({ id: 2 });
+    const switching = panel.selectNote(panel.notes[1]);
+    await Promise.resolve();
+    panel.activeNote.content = 'Typed while downloading';
+    panel.dirtyNotes.add(1);
+    loading.resolve(response({ id: 2, content: 'Next manuscript' }));
+    await switching;
+    assert.equal(saved[0].content, 'Typed while downloading');
+    assert.equal(panel.activeNote.id, 2);
+});
+
+test('performance: initial Studio summaries do not become empty cached manuscripts', () => {
+    const { panel, context } = harness();
+    vm.runInContext("initialData = { notes: [{ id: 2, title: 'Lazy manuscript' }], categories: [], folders: [] };", context);
+    context.document.getElementById = () => null;
+    panel.activeNote = null;
+    panel.syncFoldersDOM = () => {};
+    panel.dom.editorArea = { setAttribute() {} };
+    panel.dom.noteTitleInput = {};
+    let selected;
+    panel.selectNote = (note) => { selected = note; };
+    panel.loadNotesFromDOM();
+    assert.equal(selected.id, 2);
+    assert.equal(selected.content, undefined);
+    assert.equal(panel.dom.noteTitleInput.readOnly, true);
+});
+
 test('white-box: late save response never changes another active manuscript', async () => {
     const pending = deferred();
     const { panel } = harness(() => pending.promise);
